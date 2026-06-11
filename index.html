@@ -1,72 +1,92 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Notes App</title>
+<title>Gold Lobby Hub</title>
 
 <style>
 body{
 margin:0;
 font-family:Arial;
-background:linear-gradient(135deg,#0f172a,#1e293b);
 color:white;
+height:100vh;
 display:flex;
 justify-content:center;
 align-items:center;
-height:100vh;
+background:linear-gradient(120deg,#000,#111,#000);
+overflow:hidden;
+}
+
+/* GOLD ANIMATION */
+body::before{
+content:"";
+position:absolute;
+width:200%;
+height:200%;
+background:radial-gradient(circle,#ffd70022 10%,transparent 40%);
+animation:move 6s linear infinite;
+}
+
+@keyframes move{
+0%{transform:translate(-25%,-25%)}
+50%{transform:translate(0%,0%)}
+100%{transform:translate(-25%,-25%)}
 }
 
 .card{
-background:#111827;
+position:relative;
+z-index:2;
+background:#0b0b0b;
+border:1px solid #ffd70055;
+box-shadow:0 0 20px #ffd70033;
 padding:20px;
 border-radius:15px;
-width:320px;
-box-shadow:0 10px 30px rgba(0,0,0,.4);
+width:420px;
 text-align:center;
 }
 
+h2{color:#ffd700}
+
 input,textarea{
 width:90%;
-padding:10px;
-margin:6px 0;
+padding:8px;
+margin:5px;
 border:none;
 border-radius:8px;
 outline:none;
+background:#111;
+color:white;
 }
 
 button{
 padding:10px;
-width:95%;
+margin:5px;
 border:none;
 border-radius:8px;
-background:#2563eb;
-color:white;
 cursor:pointer;
-margin-top:8px;
+background:#ffd700;
+color:black;
+font-weight:bold;
 }
 
-button:hover{background:#1d4ed8}
+button:hover{opacity:.8}
+
+.nav button{
+width:30%;
+}
 
 .note{
-background:#0b1220;
-margin:10px 0;
-padding:10px;
-border-radius:10px;
+background:#111;
+border:1px solid #333;
+padding:8px;
+margin:6px 0;
+border-radius:8px;
 }
 
 .small{
 font-size:12px;
 opacity:.7;
-margin-top:5px;
-}
-
-.error{
-color:#ff4d4d;
-font-size:13px;
-margin-top:8px;
-display:none;
 }
 </style>
-
 </head>
 
 <body>
@@ -74,102 +94,150 @@ display:none;
 <div id="app"></div>
 
 <script>
-let app=document.getElementById("app");
+const app=document.getElementById("app");
 
-// ---------- LOGIN UI ----------
-function loginUI(err=""){
+// ---------- STORAGE ----------
+const getU=()=>localStorage.getItem("u");
+const setU=u=>localStorage.setItem("u",u);
+const getDB=()=>JSON.parse(localStorage.getItem("db")||"{}");
+const setDB=d=>localStorage.setItem("db",JSON.stringify(d));
+
+// ---------- LOGIN ----------
+function loginUI(msg=""){
 app.innerHTML=`
 <div class="card">
-<h2>🔐 Login</h2>
+<h2>🔐 GOLD HUB LOGIN</h2>
 
 <input id="u" placeholder="username">
 <input id="p" type="password" placeholder="password">
 
-<div class="error" id="err">${err}</div>
+<div class="small" style="color:red">${msg}</div>
 
-<button onclick="login()">Login / Create</button>
-
-<div class="small">First time = auto creates account</div>
+<button onclick="login()">Enter Hub</button>
 </div>`;
-if(err){
-document.getElementById("err").style.display="block";
-}
 }
 
-// ---------- LOGIN ----------
 function login(){
-let u=document.getElementById("u").value;
+let u=document.getElementById("u").value.trim();
 let p=document.getElementById("p").value;
 
-if(!u||!p)return loginUI("Please fill everything.");
+if(!u||!p)return loginUI("Fill everything");
 
-let users=JSON.parse(localStorage.getItem("users")||"{}");
+let db=getDB();
 
-// create account
-if(!users[u]){
-users[u]={pass:p,notes:Array(10).fill("").map((_,i)=>({name:"Note "+(i+1),text:""}))};
+if(!db[u]){
+db[u]={
+pass:p,
+notes:[],
+};
 }
 
-// WRONG PASSWORD
-if(users[u].pass!==p){
-loginUI("❌ Wrong password. Try again.");
-return;
+if(db[u].pass!==p)return loginUI("Wrong password ❌");
+
+setDB(db);
+setU(u);
+lobby();
 }
 
-localStorage.setItem("current",u);
-localStorage.setItem("users",JSON.stringify(users));
-loadNotes();
-}
+// ---------- LOBBY ----------
+function lobby(){
+let u=getU();
+if(!u)return loginUI();
 
-// ---------- NOTES UI ----------
-function loadNotes(){
-let u=localStorage.getItem("current");
-let users=JSON.parse(localStorage.getItem("users"));
-let notes=users[u].notes;
+let db=getDB();
+let notes=db[u].notes;
 
 app.innerHTML=`
-<div class="card" style="width:400px">
-<h2>📝 ${u}'s Notes</h2>
-<button onclick="logout()">Logout</button>
-<div id="notes"></div>
+<div class="card">
+<h2>👑 GOLD LOBBY</h2>
+
+<div class="nav">
+<button onclick="show('games')">🎮 Games</button>
+<button onclick="show('movies')">🎬 Movies</button>
+<button onclick="show('notes')">📝 Notes</button>
+</div>
+
+<div id="view"></div>
+
+<button onclick="save()">💾 Save</button>
+<button onclick="logout()">🚪 Logout</button>
 </div>`;
 
-let n=document.getElementById("notes");
+show("notes");
+}
 
-notes.forEach((note,i)=>{
-n.innerHTML+=`
+// ---------- VIEWS ----------
+function show(type){
+let u=getU();
+let db=getDB();
+let v=document.getElementById("view");
+
+if(type==="games"){
+v.innerHTML=`<h3>🎮 Games</h3><p>Coming soon...</p>`;
+}
+
+if(type==="movies"){
+v.innerHTML=`<h3>🎬 Movies</h3><p>Coming soon...</p>`;
+}
+
+if(type==="notes"){
+let notes=db[u].notes;
+
+v.innerHTML=`
+<h3>📝 Notes</h3>
+<button onclick="addNote()">+ Add Note</button>
+<div id="notesBox"></div>
+`;
+
+let box=document.getElementById("notesBox");
+
+notes.forEach((n,i)=>{
+box.innerHTML+=`
 <div class="note">
-<input value="${note.name}" oninput="rename(${i},this.value)">
-<textarea oninput="save(${i},this.value)">${note.text}</textarea>
+<input value="${n.title||"Note"}" oninput="rename(${i},this.value)">
+<textarea oninput="edit(${i},this.value)">${n.text||""}</textarea>
 </div>`;
 });
 }
-
-// ---------- SAVE ----------
-function save(i,v){
-let u=localStorage.getItem("current");
-let users=JSON.parse(localStorage.getItem("users"));
-users[u].notes[i].text=v;
-localStorage.setItem("users",JSON.stringify(users));
 }
 
-// ---------- RENAME ----------
-function rename(i,v){
-let u=localStorage.getItem("current");
-let users=JSON.parse(localStorage.getItem("users"));
-users[u].notes[i].name=v;
-localStorage.setItem("users",JSON.stringify(users));
+// ---------- NOTES ----------
+function addNote(){
+let u=getU();
+let db=getDB();
+
+db[u].notes.push({title:"New Note",text:""});
+setDB(db);
+lobby();
+}
+
+function edit(i,val){
+let u=getU();
+let db=getDB();
+db[u].notes[i].text=val;
+setDB(db);
+}
+
+function rename(i,val){
+let u=getU();
+let db=getDB();
+db[u].notes[i].title=val;
+setDB(db);
+}
+
+// ---------- SAVE ----------
+function save(){
+alert("💾 Saved!");
 }
 
 // ---------- LOGOUT ----------
 function logout(){
-localStorage.removeItem("current");
+localStorage.removeItem("u");
 loginUI();
 }
 
 // ---------- START ----------
-if(localStorage.getItem("current")) loadNotes();
-else loginUI();
+getU()?lobby():loginUI();
 </script>
 
 </body>
