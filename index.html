@@ -1,48 +1,49 @@
-```javascript
-function login(){
+```html
+<script>
+function login() {
 
-    const username =
-        document.getElementById("username").value;
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value;
 
-    const password =
-        document.getElementById("password").value;
+    if (username === "" || password === "") {
+        document.getElementById("status").innerText =
+            "Enter a username and password.";
+        return;
+    }
 
-    const savedUser =
-        localStorage.getItem("hubUser");
+    const savedUser = localStorage.getItem("hubUser");
+    const savedPass = localStorage.getItem("hubPass");
 
-    const savedPass =
-        localStorage.getItem("hubPass");
-
-    if(!savedUser){
+    // First time visiting: create account
+    if (savedUser === null) {
 
         localStorage.setItem("hubUser", username);
         localStorage.setItem("hubPass", password);
 
         document.getElementById("status").innerText =
-            "✅ Account Created! Logging in...";
+            "✅ Account created!";
 
-        setTimeout(showHub,500);
+        showHub();
         return;
     }
 
-    if(
-        username === savedUser &&
-        password === savedPass
-    ){
+    // Existing account: check password
+    if (username === savedUser && password === savedPass) {
+
         showHub();
-    }else{
+
+    } else {
+
         document.getElementById("status").innerText =
             "❌ Wrong username or password";
+
     }
 }
 
-function showHub(){
+function showHub() {
 
-    document.getElementById("login").style.display =
-        "none";
-
-    document.getElementById("hub").style.display =
-        "block";
+    document.getElementById("login").style.display = "none";
+    document.getElementById("hub").style.display = "block";
 
     document.getElementById("userDisplay").innerText =
         localStorage.getItem("hubUser");
@@ -51,7 +52,7 @@ function showHub(){
         localStorage.getItem("hubNotes") || "";
 }
 
-function saveNotes(){
+function saveNotes() {
 
     localStorage.setItem(
         "hubNotes",
@@ -61,20 +62,21 @@ function saveNotes(){
     alert("Notes Saved!");
 }
 
-function logout(){
+function logout() {
 
     location.reload();
 }
 
-window.onload=function(){
+window.onload = function() {
 
-    const savedUser =
-        localStorage.getItem("hubUser");
+    document.getElementById("hub").style.display = "none";
+    document.getElementById("login").style.display = "block";
 
-    if(savedUser){
+    if (localStorage.getItem("hubUser")) {
 
         document.getElementById("status").innerText =
-            "Enter your password to continue.";
+            "Enter your username and password.";
     }
 }
+</script>
 ```
