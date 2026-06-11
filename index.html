@@ -1,6 +1,176 @@
 <!DOCTYPE html>
 <html>
+<head>
+<title>Notes App</title>
+
+<style>
+body{
+margin:0;
+font-family:Arial;
+background:linear-gradient(135deg,#0f172a,#1e293b);
+color:white;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+}
+
+.card{
+background:#111827;
+padding:20px;
+border-radius:15px;
+width:320px;
+box-shadow:0 10px 30px rgba(0,0,0,.4);
+text-align:center;
+}
+
+input,textarea{
+width:90%;
+padding:10px;
+margin:6px 0;
+border:none;
+border-radius:8px;
+outline:none;
+}
+
+button{
+padding:10px;
+width:95%;
+border:none;
+border-radius:8px;
+background:#2563eb;
+color:white;
+cursor:pointer;
+margin-top:8px;
+}
+
+button:hover{background:#1d4ed8}
+
+.note{
+background:#0b1220;
+margin:10px 0;
+padding:10px;
+border-radius:10px;
+}
+
+.small{
+font-size:12px;
+opacity:.7;
+margin-top:5px;
+}
+
+.error{
+color:#ff4d4d;
+font-size:13px;
+margin-top:8px;
+display:none;
+}
+</style>
+
+</head>
+
 <body>
-<h1 style="color:white;">IT WORKS 🚀</h1>
+
+<div id="app"></div>
+
+<script>
+let app=document.getElementById("app");
+
+// ---------- LOGIN UI ----------
+function loginUI(err=""){
+app.innerHTML=`
+<div class="card">
+<h2>🔐 Login</h2>
+
+<input id="u" placeholder="username">
+<input id="p" type="password" placeholder="password">
+
+<div class="error" id="err">${err}</div>
+
+<button onclick="login()">Login / Create</button>
+
+<div class="small">First time = auto creates account</div>
+</div>`;
+if(err){
+document.getElementById("err").style.display="block";
+}
+}
+
+// ---------- LOGIN ----------
+function login(){
+let u=document.getElementById("u").value;
+let p=document.getElementById("p").value;
+
+if(!u||!p)return loginUI("Please fill everything.");
+
+let users=JSON.parse(localStorage.getItem("users")||"{}");
+
+// create account
+if(!users[u]){
+users[u]={pass:p,notes:Array(10).fill("").map((_,i)=>({name:"Note "+(i+1),text:""}))};
+}
+
+// WRONG PASSWORD
+if(users[u].pass!==p){
+loginUI("❌ Wrong password. Try again.");
+return;
+}
+
+localStorage.setItem("current",u);
+localStorage.setItem("users",JSON.stringify(users));
+loadNotes();
+}
+
+// ---------- NOTES UI ----------
+function loadNotes(){
+let u=localStorage.getItem("current");
+let users=JSON.parse(localStorage.getItem("users"));
+let notes=users[u].notes;
+
+app.innerHTML=`
+<div class="card" style="width:400px">
+<h2>📝 ${u}'s Notes</h2>
+<button onclick="logout()">Logout</button>
+<div id="notes"></div>
+</div>`;
+
+let n=document.getElementById("notes");
+
+notes.forEach((note,i)=>{
+n.innerHTML+=`
+<div class="note">
+<input value="${note.name}" oninput="rename(${i},this.value)">
+<textarea oninput="save(${i},this.value)">${note.text}</textarea>
+</div>`;
+});
+}
+
+// ---------- SAVE ----------
+function save(i,v){
+let u=localStorage.getItem("current");
+let users=JSON.parse(localStorage.getItem("users"));
+users[u].notes[i].text=v;
+localStorage.setItem("users",JSON.stringify(users));
+}
+
+// ---------- RENAME ----------
+function rename(i,v){
+let u=localStorage.getItem("current");
+let users=JSON.parse(localStorage.getItem("users"));
+users[u].notes[i].name=v;
+localStorage.setItem("users",JSON.stringify(users));
+}
+
+// ---------- LOGOUT ----------
+function logout(){
+localStorage.removeItem("current");
+loginUI();
+}
+
+// ---------- START ----------
+if(localStorage.getItem("current")) loadNotes();
+else loginUI();
+</script>
+
 </body>
 </html>
