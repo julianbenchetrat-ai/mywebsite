@@ -2,46 +2,48 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Login Demo</title>
+<title>Julian's Hub</title>
+<style>
+body{
+    background:#0f172a;
+    color:white;
+    font-family:Arial;
+    text-align:center;
+    padding-top:100px;
+}
+
+#hub{
+    display:none;
+}
+</style>
 </head>
 <body>
 
-<h1>Create Account</h1>
+<div id="login">
+    <h1>🔒 Enter Password</h1>
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="checkPassword()">Enter</button>
+    <p id="message"></p>
+</div>
 
-<input id="username" placeholder="Username">
-<input id="password" type="password" placeholder="Password">
-<button onclick="register()">Create Account</button>
-
-<h1>Login</h1>
-
-<input id="loginUser" placeholder="Username">
-<input id="loginPass" type="password" placeholder="Password">
-<button onclick="login()">Login</button>
-
-<p id="result"></p>
+<div id="hub">
+    <h1>🎮🎬 Julian's Hub</h1>
+    <p>Welcome to the lobby!</p>
+</div>
 
 <script>
-function register() {
-    const username = document.getElementById("username").value;
-    const password = document.getElementById("password").value;
+const HUB_PASSWORD = "julian123";
 
-    localStorage.setItem(username, password);
+function checkPassword() {
+    const entered =
+        document.getElementById("password").value;
 
-    alert("Account created!");
-}
-
-function login() {
-    const username = document.getElementById("loginUser").value;
-    const password = document.getElementById("loginPass").value;
-
-    const savedPassword = localStorage.getItem(username);
-
-    if(savedPassword === password) {
-        document.getElementById("result").innerHTML =
-            "✅ Logged In!";
+    if (entered === HUB_PASSWORD) {
+        document.getElementById("login").style.display = "none";
+        document.getElementById("hub").style.display = "block";
     } else {
-        document.getElementById("result").innerHTML =
-            "❌ Wrong username or password";
+        document.getElementById("message").innerText =
+            "Wrong password!";
     }
 }
 </script>
