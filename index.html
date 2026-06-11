@@ -99,13 +99,9 @@ cursor:pointer;
 <div id="app"></div>
 
 <script>
-const app=document.getElementById("app");
-
-// ---------- SINGLE SOURCE OF TRUTH ----------
 let db = JSON.parse(localStorage.getItem("db")||"{}");
 let user = localStorage.getItem("u");
 
-// SAVE DB ONCE
 function saveDB(){
 localStorage.setItem("db",JSON.stringify(db));
 }
@@ -131,23 +127,38 @@ let p=document.getElementById("p").value;
 
 if(!u||!p)return loginUI("Fill everything");
 
+// ❌ PREVENT DUPLICATE USERNAMES (same name but different password)
+if(db[u] && db[u].pass !== p){
+return loginUI("❌ Username already exists with a different password");
+}
+
+// CREATE USER IF NEW
 if(!db[u]){
 db[u]={pass:p,notes:[]};
 }
 
-if(db[u].pass!==p)return loginUI("Wrong password ❌");
+if(db[u].pass!==p){
+return loginUI("Wrong password ❌");
+}
 
 user=u;
 localStorage.setItem("u",user);
 
 saveDB();
-lobby();
+welcome();
+}
+
+// ---------- WELCOME SCREEN ----------
+function welcome(){
+app.innerHTML=`
+<div class="card">
+<h2>👋 Hello, ${user}</h2>
+<button onclick="lobby()">Enter Lobby</button>
+</div>`;
 }
 
 // ---------- LOBBY ----------
 function lobby(){
-if(!user)return loginUI();
-
 app.innerHTML=`
 <div class="card">
 <h2>👑 GOLD LOBBY</h2>
@@ -169,7 +180,6 @@ show("notes");
 
 // ---------- VIEW ----------
 function show(type){
-
 let v=document.getElementById("view");
 
 if(type==="games"){
@@ -241,7 +251,7 @@ loginUI();
 }
 
 // ---------- START ----------
-user ? lobby() : loginUI();
+user ? welcome() : loginUI();
 </script>
 
 </body>
