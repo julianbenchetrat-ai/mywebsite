@@ -1,258 +1,4 @@
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Julian's Hub</title>
-
-<style>
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-    font-family:Arial,sans-serif;
-}
-
-body{
-    min-height:100vh;
-    color:white;
-    overflow-x:hidden;
-
-    background:linear-gradient(
-        -45deg,
-        #0f172a,
-        #1e293b,
-        #312e81,
-        #0f172a
-    );
-
-    background-size:400% 400%;
-    animation:bgMove 12s ease infinite;
-}
-
-@keyframes bgMove{
-    0%{background-position:0% 50%;}
-    50%{background-position:100% 50%;}
-    100%{background-position:0% 50%;}
-}
-
-.particle{
-    position:fixed;
-    width:6px;
-    height:6px;
-    background:white;
-    border-radius:50%;
-    opacity:.25;
-    animation:rise linear infinite;
-}
-
-@keyframes rise{
-    from{
-        transform:translateY(100vh);
-    }
-    to{
-        transform:translateY(-120vh);
-    }
-}
-
-.panel{
-    max-width:1000px;
-    margin:40px auto;
-    padding:30px;
-
-    background:rgba(255,255,255,.08);
-    backdrop-filter:blur(10px);
-
-    border-radius:20px;
-
-    border:1px solid rgba(255,255,255,.15);
-
-    animation:fadeIn 1s ease;
-}
-
-@keyframes fadeIn{
-    from{
-        opacity:0;
-        transform:translateY(20px);
-    }
-    to{
-        opacity:1;
-        transform:translateY(0);
-    }
-}
-
-h1{
-    text-align:center;
-    font-size:3rem;
-
-    text-shadow:
-        0 0 10px #60a5fa,
-        0 0 20px #60a5fa;
-
-    animation:float 3s ease-in-out infinite;
-}
-
-@keyframes float{
-    0%{transform:translateY(0);}
-    50%{transform:translateY(-8px);}
-    100%{transform:translateY(0);}
-}
-
-input,
-textarea{
-    width:100%;
-    padding:12px;
-    margin-top:10px;
-    border:none;
-    border-radius:12px;
-}
-
-button{
-    margin-top:10px;
-    padding:12px 20px;
-    border:none;
-    border-radius:12px;
-    cursor:pointer;
-    font-weight:bold;
-    transition:.3s;
-}
-
-button:hover{
-    transform:scale(1.05);
-    box-shadow:0 0 20px #60a5fa;
-}
-
-.grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
-    gap:20px;
-    margin-top:20px;
-}
-
-.card{
-    background:rgba(255,255,255,.08);
-    padding:20px;
-    border-radius:15px;
-}
-
-#hub{
-    display:none;
-}
-
-#status{
-    margin-top:10px;
-}
-</style>
-</head>
-<body>
-
-<script>
-for(let i=0;i<40;i++){
-    const p=document.createElement("div");
-    p.className="particle";
-    p.style.left=Math.random()*100+"vw";
-    p.style.animationDuration=(5+Math.random()*10)+"s";
-    document.body.appendChild(p);
-}
-</script>
-
-<div class="panel" id="login">
-
-<h1>🚀 Julian's Hub</h1>
-
-<h2>Create Account / Login</h2>
-
-<input id="username" placeholder="Username">
-
-<input id="password"
-type="password"
-placeholder="Password">
-
-<button onclick="login()">
-Enter Hub
-</button>
-
-<p id="status"></p>
-
-</div>
-
-<div class="panel" id="hub">
-
-<h1>🎮🎬 Welcome</h1>
-
-<p>
-Logged in as:
-<b id="userDisplay"></b>
-</p>
-
-<button onclick="logout()">
-Logout
-</button>
-
-<hr style="margin:20px 0;">
-
-<h2>📝 Notes</h2>
-
-<textarea
-id="notes"
-rows="10"
-placeholder="Write notes here...">
-</textarea>
-
-<button onclick="saveNotes()">
-Save Notes
-</button>
-
-<hr style="margin:20px 0;">
-
-<h2>🎮 Games</h2>
-
-<div class="grid">
-
-<div class="card">
-<h3>Fighting Game</h3>
-<p>Coming Soon</p>
-</div>
-
-<div class="card">
-<h3>Lava Adventure</h3>
-<p>Coming Soon</p>
-</div>
-
-<div class="card">
-<h3>Future Game</h3>
-<p>Add your own game.</p>
-</div>
-
-</div>
-
-<hr style="margin:20px 0;">
-
-<h2>🎬 Movies</h2>
-
-<div class="grid">
-
-<div class="card">
-<h3>Movie Slot 1</h3>
-<p>Add movies later.</p>
-</div>
-
-<div class="card">
-<h3>Movie Slot 2</h3>
-<p>Add movies later.</p>
-</div>
-
-<div class="card">
-<h3>Movie Slot 3</h3>
-<p>Add movies later.</p>
-</div>
-
-</div>
-
-</div>
-
-<script>
+```javascript
 function login(){
 
     const username =
@@ -261,16 +7,33 @@ function login(){
     const password =
         document.getElementById("password").value;
 
-    if(username === "" || password === ""){
+    const savedUser =
+        localStorage.getItem("hubUser");
+
+    const savedPass =
+        localStorage.getItem("hubPass");
+
+    if(!savedUser){
+
+        localStorage.setItem("hubUser", username);
+        localStorage.setItem("hubPass", password);
+
         document.getElementById("status").innerText =
-            "Enter a username and password.";
+            "✅ Account Created! Logging in...";
+
+        setTimeout(showHub,500);
         return;
     }
 
-    localStorage.setItem("hubUser", username);
-    localStorage.setItem("hubPass", password);
-
-    showHub();
+    if(
+        username === savedUser &&
+        password === savedPass
+    ){
+        showHub();
+    }else{
+        document.getElementById("status").innerText =
+            "❌ Wrong username or password";
+    }
 }
 
 function showHub(){
@@ -300,20 +63,18 @@ function saveNotes(){
 
 function logout(){
 
-    localStorage.removeItem("hubUser");
-    localStorage.removeItem("hubPass");
-
     location.reload();
 }
 
 window.onload=function(){
 
-    if(localStorage.getItem("hubUser")){
-        showHub();
+    const savedUser =
+        localStorage.getItem("hubUser");
+
+    if(savedUser){
+
+        document.getElementById("status").innerText =
+            "Enter your password to continue.";
     }
 }
-</script>
-
-</body>
-</html>
 ```
