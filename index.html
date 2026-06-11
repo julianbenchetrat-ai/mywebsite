@@ -16,7 +16,6 @@ background:linear-gradient(120deg,#000,#111,#000);
 overflow:hidden;
 }
 
-/* GOLD ANIMATION */
 body::before{
 content:"";
 position:absolute;
@@ -70,9 +69,7 @@ font-weight:bold;
 
 button:hover{opacity:.8}
 
-.nav button{
-width:30%;
-}
+.nav button{width:30%}
 
 .note{
 background:#111;
@@ -80,12 +77,24 @@ border:1px solid #333;
 padding:8px;
 margin:6px 0;
 border-radius:8px;
+position:relative;
 }
 
-.small{
+.close{
+position:absolute;
+top:5px;
+right:8px;
+background:red;
+color:white;
+border:none;
+border-radius:50%;
+width:22px;
+height:22px;
 font-size:12px;
-opacity:.7;
+cursor:pointer;
 }
+
+.small{font-size:12px;opacity:.7}
 </style>
 </head>
 
@@ -96,7 +105,6 @@ opacity:.7;
 <script>
 const app=document.getElementById("app");
 
-// ---------- STORAGE ----------
 const getU=()=>localStorage.getItem("u");
 const setU=u=>localStorage.setItem("u",u);
 const getDB=()=>JSON.parse(localStorage.getItem("db")||"{}");
@@ -111,7 +119,7 @@ app.innerHTML=`
 <input id="u" placeholder="username">
 <input id="p" type="password" placeholder="password">
 
-<div class="small" style="color:red">${msg}</div>
+<div style="color:red;font-size:12px">${msg}</div>
 
 <button onclick="login()">Enter Hub</button>
 </div>`;
@@ -120,16 +128,12 @@ app.innerHTML=`
 function login(){
 let u=document.getElementById("u").value.trim();
 let p=document.getElementById("p").value;
-
 if(!u||!p)return loginUI("Fill everything");
 
 let db=getDB();
 
 if(!db[u]){
-db[u]={
-pass:p,
-notes:[],
-};
+db[u]={pass:p,notes:[]};
 }
 
 if(db[u].pass!==p)return loginUI("Wrong password ❌");
@@ -143,9 +147,6 @@ lobby();
 function lobby(){
 let u=getU();
 if(!u)return loginUI();
-
-let db=getDB();
-let notes=db[u].notes;
 
 app.innerHTML=`
 <div class="card">
@@ -181,19 +182,19 @@ v.innerHTML=`<h3>🎬 Movies</h3><p>Coming soon...</p>`;
 }
 
 if(type==="notes"){
-let notes=db[u].notes;
-
 v.innerHTML=`
 <h3>📝 Notes</h3>
 <button onclick="addNote()">+ Add Note</button>
-<div id="notesBox"></div>
+<div id="box"></div>
 `;
 
-let box=document.getElementById("notesBox");
+let box=document.getElementById("box");
 
-notes.forEach((n,i)=>{
+db[u].notes.forEach((n,i)=>{
 box.innerHTML+=`
 <div class="note">
+<button class="close" onclick="del(${i})">x</button>
+
 <input value="${n.title||"Note"}" oninput="rename(${i},this.value)">
 <textarea oninput="edit(${i},this.value)">${n.text||""}</textarea>
 </div>`;
@@ -205,7 +206,6 @@ box.innerHTML+=`
 function addNote(){
 let u=getU();
 let db=getDB();
-
 db[u].notes.push({title:"New Note",text:""});
 setDB(db);
 lobby();
@@ -223,6 +223,14 @@ let u=getU();
 let db=getDB();
 db[u].notes[i].title=val;
 setDB(db);
+}
+
+function del(i){
+let u=getU();
+let db=getDB();
+db[u].notes.splice(i,1);   // 🔥 remove note
+setDB(db);
+lobby();
 }
 
 // ---------- SAVE ----------
