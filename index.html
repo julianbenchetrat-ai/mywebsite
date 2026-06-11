@@ -1,58 +1,154 @@
 ```html
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Julian's Hub</title>
+
+<style>
+body{
+    margin:0;
+    font-family:Arial,sans-serif;
+    color:white;
+    min-height:100vh;
+    background:linear-gradient(-45deg,#0f172a,#1e293b,#312e81,#0f172a);
+    background-size:400% 400%;
+    animation:bgMove 12s ease infinite;
+}
+
+@keyframes bgMove{
+    0%{background-position:0% 50%;}
+    50%{background-position:100% 50%;}
+    100%{background-position:0% 50%;}
+}
+
+.panel{
+    max-width:900px;
+    margin:50px auto;
+    padding:30px;
+    background:rgba(255,255,255,.08);
+    backdrop-filter:blur(10px);
+    border-radius:20px;
+}
+
+h1{
+    text-align:center;
+}
+
+input, textarea{
+    width:100%;
+    padding:12px;
+    border:none;
+    border-radius:10px;
+    margin-top:10px;
+}
+
+button{
+    padding:12px 20px;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+    margin-top:10px;
+}
+
+#hub{
+    display:none;
+}
+
+.card{
+    background:rgba(255,255,255,.08);
+    padding:20px;
+    border-radius:15px;
+    margin-top:20px;
+}
+</style>
+</head>
+<body>
+
+<div class="panel" id="login">
+
+<h1>🚀 Julian's Hub</h1>
+
+<p>Enter Password</p>
+
+<input
+id="password"
+type="password"
+placeholder="Password">
+
+<button onclick="login()">
+Enter Hub
+</button>
+
+<p id="status"></p>
+
+</div>
+
+<div class="panel" id="hub">
+
+<h1>🎮🎬 Welcome</h1>
+
+<button onclick="logout()">
+Logout
+</button>
+
+<div class="card">
+
+<h2>📝 Notes</h2>
+
+<textarea
+id="notes"
+rows="10"
+placeholder="Write notes here..."></textarea>
+
+<button onclick="saveNotes()">
+Save Notes
+</button>
+
+</div>
+
+<div class="card">
+<h2>🎮 Games</h2>
+<p>Add games here later.</p>
+</div>
+
+<div class="card">
+<h2>🎬 Movies</h2>
+<p>Add movies here later.</p>
+</div>
+
+</div>
+
 <script>
-function login() {
 
-    const username = document.getElementById("username").value.trim();
-    const password = document.getElementById("password").value;
+const PASSWORD = "julian123";
 
-    if (username === "" || password === "") {
-        document.getElementById("status").innerText =
-            "Enter a username and password.";
-        return;
-    }
+function login(){
 
-    const savedUser = localStorage.getItem("hubUser");
-    const savedPass = localStorage.getItem("hubPass");
+    const entered =
+        document.getElementById("password").value;
 
-    // First time visiting: create account
-    if (savedUser === null) {
+    if(entered === PASSWORD){
 
-        localStorage.setItem("hubUser", username);
-        localStorage.setItem("hubPass", password);
+        document.getElementById("login").style.display =
+            "none";
 
-        document.getElementById("status").innerText =
-            "✅ Account created!";
+        document.getElementById("hub").style.display =
+            "block";
 
-        showHub();
-        return;
-    }
+        document.getElementById("notes").value =
+            localStorage.getItem("hubNotes") || "";
 
-    // Existing account: check password
-    if (username === savedUser && password === savedPass) {
-
-        showHub();
-
-    } else {
+    }else{
 
         document.getElementById("status").innerText =
-            "❌ Wrong username or password";
+            "❌ Wrong Password";
 
     }
 }
 
-function showHub() {
-
-    document.getElementById("login").style.display = "none";
-    document.getElementById("hub").style.display = "block";
-
-    document.getElementById("userDisplay").innerText =
-        localStorage.getItem("hubUser");
-
-    document.getElementById("notes").value =
-        localStorage.getItem("hubNotes") || "";
-}
-
-function saveNotes() {
+function saveNotes(){
 
     localStorage.setItem(
         "hubNotes",
@@ -62,21 +158,19 @@ function saveNotes() {
     alert("Notes Saved!");
 }
 
-function logout() {
+function logout(){
 
-    location.reload();
+    document.getElementById("hub").style.display =
+        "none";
+
+    document.getElementById("login").style.display =
+        "block";
+
+    document.getElementById("password").value = "";
 }
 
-window.onload = function() {
-
-    document.getElementById("hub").style.display = "none";
-    document.getElementById("login").style.display = "block";
-
-    if (localStorage.getItem("hubUser")) {
-
-        document.getElementById("status").innerText =
-            "Enter your username and password.";
-    }
-}
 </script>
+
+</body>
+</html>
 ```
