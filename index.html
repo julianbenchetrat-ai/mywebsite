@@ -1,10 +1,168 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>My First Website</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Julian's Hub</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    background:#0f172a;
+    color:white;
+    font-family:Arial, sans-serif;
+}
+
+header{
+    text-align:center;
+    padding:40px 20px;
+    background:#111827;
+}
+
+header h1{
+    font-size:3rem;
+}
+
+header p{
+    margin-top:10px;
+    color:#94a3b8;
+}
+
+nav{
+    display:flex;
+    justify-content:center;
+    gap:20px;
+    padding:15px;
+    background:#1e293b;
+}
+
+nav a{
+    color:white;
+    text-decoration:none;
+    font-weight:bold;
+}
+
+.section{
+    padding:40px 20px;
+}
+
+.section h2{
+    margin-bottom:20px;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+    gap:20px;
+}
+
+.card{
+    background:#1e293b;
+    border-radius:12px;
+    padding:20px;
+    transition:.3s;
+}
+
+.card:hover{
+    transform:translateY(-5px);
+}
+
+.card h3{
+    margin-bottom:10px;
+}
+
+.placeholder{
+    height:140px;
+    background:#334155;
+    border-radius:10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    margin-bottom:15px;
+    color:#cbd5e1;
+}
+
+footer{
+    text-align:center;
+    padding:30px;
+    background:#111827;
+    color:#94a3b8;
+}
+</style>
 </head>
+
 <body>
-    <h1>Hello World!</h1>
-    <p>This is my website hosted on Vercel.</p>
+
+<header>
+    <h1>🎮🎬 Julian's Hub</h1>
+    <p>Games • Movies • Entertainment</p>
+</header>
+
+<nav>
+    <a href="#games">Games</a>
+    <a href="#movies">Movies</a>
+</nav>
+
+<section id="games" class="section">
+    <h2>🎮 Games</h2>
+
+    <div class="grid">
+
+        <div class="card">
+            <div class="placeholder">Game Thumbnail</div>
+            <h3>Fighting Game</h3>
+            <p>Coming Soon</p>
+        </div>
+
+        <div class="card">
+            <div class="placeholder">Game Thumbnail</div>
+            <h3>Lava Adventure</h3>
+            <p>Coming Soon</p>
+        </div>
+
+        <div class="card">
+            <div class="placeholder">Game Thumbnail</div>
+            <h3>Future Game</h3>
+            <p>Add your own game here.</p>
+        </div>
+
+    </div>
+</section>
+
+<section id="movies" class="section">
+    <h2>🎬 Movies</h2>
+
+    <div class="grid">
+
+        <div class="card">
+            <div class="placeholder">Movie Poster</div>
+            <h3>Movie Slot 1</h3>
+            <p>Add a movie later.</p>
+        </div>
+
+        <div class="card">
+            <div class="placeholder">Movie Poster</div>
+            <h3>Movie Slot 2</h3>
+            <p>Add a movie later.</p>
+        </div>
+
+        <div class="card">
+            <div class="placeholder">Movie Poster</div>
+            <h3>Movie Slot 3</h3>
+            <p>Add a movie later.</p>
+        </div>
+
+    </div>
+</section>
+
+<footer>
+    © 2026 Julian's Hub
+</footer>
+
 </body>
 </html>
