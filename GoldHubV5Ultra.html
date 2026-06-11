@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gold Hub V5 Ultra</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+background:#050505;color:white;overflow:hidden;
+}
+.bg{
+position:fixed;inset:0;pointer-events:none;
+background:
+radial-gradient(circle at 20% 20%,rgba(255,215,0,.15),transparent 20%),
+radial-gradient(circle at 80% 30%,rgba(255,215,0,.10),transparent 20%),
+radial-gradient(circle at 50% 80%,rgba(255,215,0,.08),transparent 25%);
+}
+.particle{
+position:fixed;border-radius:50%;background:rgba(255,215,0,.7);
+animation:float 15s linear infinite;
+}
+@keyframes float{
+from{transform:translateY(100vh)}to{transform:translateY(-20vh)}
+}
+.glass{
+background:rgba(20,20,20,.65);
+backdrop-filter:blur(18px);
+border:1px solid rgba(255,215,0,.2);
+box-shadow:0 0 25px rgba(255,215,0,.08);
+}
+#app{height:100vh;position:relative;z-index:2}
+.login{width:min(450px,92%);margin:8vh auto;padding:25px;border-radius:28px}
+.logo{
+font-size:42px;font-weight:900;color:#ffd700;text-align:center;
+text-shadow:0 0 20px rgba(255,215,0,.5)
+}
+input,textarea{
+width:100%;padding:12px;margin-top:8px;
+background:#151515;color:white;border:1px solid #333;
+border-radius:16px;
+}
+button{
+padding:12px 16px;border:none;border-radius:16px;
+background:linear-gradient(135deg,#ffd700,#c69700);
+font-weight:800;cursor:pointer;
+}
+.sidebar{
+position:fixed;left:0;top:0;width:100px;height:100%;
+padding-top:20px
+}
+.icon{
+width:60px;height:60px;margin:12px auto;border-radius:18px;
+display:flex;align-items:center;justify-content:center;
+font-size:24px;cursor:pointer;
+}
+.main{margin-left:110px;height:100vh;overflow:auto;padding:20px}
+.hero{padding:25px;border-radius:30px;margin-bottom:20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px}
+.card{padding:20px;border-radius:24px;min-height:180px}
+.note{margin-top:12px;padding:12px;border-radius:16px;background:#141414}
+.gold{color:#ffd700}
+.ring{
+width:120px;height:120px;border-radius:50%;
+border:10px solid rgba(255,215,0,.2);
+border-top-color:#ffd700;
+margin:auto;
+animation:spin 6s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<script>
+for(let i=0;i<30;i++){
+let p=document.createElement('div');
+p.className='particle';
+p.style.width=p.style.height=(Math.random()*5+2)+'px';
+p.style.left=Math.random()*100+'vw';
+p.style.animationDuration=(10+Math.random()*15)+'s';
+document.body.appendChild(p);
+}
+</script>
+<div id="app"></div>
+<script>
+const app=document.getElementById('app');
+let db=JSON.parse(localStorage.getItem('goldhubdb')||'{}');
+let user=localStorage.getItem('goldhubuser');
+function save(){localStorage.setItem('goldhubdb',JSON.stringify(db));}
+
+function loginUI(msg=''){
+app.innerHTML=`<div class="login glass">
+<div class="logo">👑 GOLD HUB</div><br>
+<input id="u" placeholder="Username">
+<input id="p" type="password" placeholder="Password"><br><br>
+<div style="color:#ff8888">${msg}</div><br>
+<button onclick="login()">Enter Dashboard</button>
+</div>`;
+}
+
+function login(){
+const u=document.getElementById('u').value.trim();
+const p=document.getElementById('p').value;
+if(!u||!p)return loginUI('Fill everything');
+if(!db[u]) db[u]={pass:p,notes:[]};
+if(db[u].pass!==p)return loginUI('Wrong password');
+user=u;
+localStorage.setItem('goldhubuser',u);
+save();
+dashboard();
+}
+
+function dashboard(){
+app.innerHTML=`
+<div class="sidebar">
+<div class="icon glass" onclick="tab('home')">🏠</div>
+<div class="icon glass" onclick="tab('notes')">📝</div>
+<div class="icon glass" onclick="tab('games')">🎮</div>
+<div class="icon glass" onclick="tab('movies')">🎬</div>
+<div class="icon glass" onclick="logout()">🚪</div>
+</div>
+<div class="main">
+<div id="view"></div>
+</div>`;
+tab('home');
+}
+
+function tab(t){
+const v=document.getElementById('view');
+if(t==='home'){
+v.innerHTML=`
+<div class="hero glass">
+<h1 class="gold">Welcome Back, ${user}</h1>
+<p>Premium Personal Dashboard</p>
+</div>
+<div class="grid">
+<div class="card glass"><h2>📝 Notes</h2><h1>${db[user].notes.length}</h1></div>
+<div class="card glass"><h2>🎮 Games</h2><p>Your game library</p></div>
+<div class="card glass"><h2>🎬 Movies</h2><p>Your movie collection</p></div>
+<div class="card glass"><div class="ring"></div><p style="text-align:center">Gold Status</p></div>
+</div>`;
+}
+if(t==='games'){
+v.innerHTML='<div class="card glass"><h1>🎮 Games</h1><br><p>Add game tiles here.</p></div>';
+}
+if(t==='movies'){
+v.innerHTML='<div class="card glass"><h1>🎬 Movies</h1><br><p>Add movie posters here.</p></div>';
+}
+if(t==='notes'){
+let h='<div class="card glass"><h1>📝 Notes</h1><br><button onclick="addNote()">+ Add Note</button>';
+db[user].notes.forEach((n,i)=>{
+if(n.locked){
+h+=`<div class="note">🔒 <b>${n.title}</b><br><button onclick="unlockNote(${i})">Unlock</button></div>`;
+}else{
+h+=`<div class="note">
+<input value="${(n.title||'').replace(/"/g,'&quot;')}" oninput="db[user].notes[${i}].title=this.value;save()">
+<textarea oninput="db[user].notes[${i}].text=this.value;save()">${n.text||''}</textarea>
+<button onclick="lockNote(${i})">Lock</button>
+<button onclick="delNote(${i})">Delete</button>
+</div>`;
+}
+});
+h+='</div>';v.innerHTML=h;
+}
+}
+function addNote(){db[user].notes.push({title:'New Note',text:'',locked:false,password:''});save();tab('notes');}
+function lockNote(i){let p=prompt('Password?');if(!p)return;db[user].notes[i].locked=true;db[user].notes[i].password=p;save();tab('notes');}
+function unlockNote(i){let p=prompt('Enter password');if(p===db[user].notes[i].password){db[user].notes[i].locked=false;save();tab('notes');}else alert('Wrong password');}
+function delNote(i){db[user].notes.splice(i,1);save();tab('notes');}
+function logout(){localStorage.removeItem('goldhubuser');location.reload();}
+user?dashboard():loginUI();
+</script>
+</body>
+</html>
