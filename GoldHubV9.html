@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gold Hub V9</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Segoe UI,sans-serif;background:#050505;color:#fff;overflow:hidden}
+body:before{content:'';position:fixed;inset:0;background:
+radial-gradient(circle at 20% 20%,rgba(255,215,0,.18),transparent 25%),
+radial-gradient(circle at 80% 30%,rgba(255,215,0,.12),transparent 25%)}
+.sidebar{position:fixed;left:0;top:0;width:220px;height:100%;background:#0d0d0d;border-right:1px solid #333;padding:15px}
+.logo{font-size:28px;color:gold;font-weight:800;margin-bottom:20px;text-align:center}
+.nav{padding:12px;border-radius:14px;margin:8px 0;cursor:pointer;transition:.2s}
+.nav:hover,.active{background:#1b1b1b;box-shadow:0 0 18px gold}
+.main{margin-left:220px;height:100vh;overflow:auto;padding:20px}
+.glass{background:rgba(20,20,20,.78);backdrop-filter:blur(18px);border:1px solid rgba(255,215,0,.2);border-radius:24px;box-shadow:0 0 20px rgba(255,215,0,.08)}
+.card{padding:20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px}
+.noteicon{width:110px;height:110px;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;margin:8px;cursor:pointer}
+.noteicon:hover{box-shadow:0 0 20px gold}
+button{padding:10px 14px;border:none;border-radius:12px;background:gold;font-weight:bold;cursor:pointer}
+input,textarea{width:100%;padding:10px;margin-top:8px;background:#151515;color:#fff;border:1px solid #333;border-radius:12px}
+iframe{width:100%;height:400px;border:none;background:#fff;border-radius:12px}
+.small{opacity:.8;font-size:12px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+let db=JSON.parse(localStorage.getItem('ghv9')||'{}');
+let user=localStorage.getItem('ghv9user');
+const app=document.getElementById('app');
+
+function save(){localStorage.setItem('ghv9',JSON.stringify(db));}
+
+function loginUI(msg=''){
+app.innerHTML=`<div class="glass card" style="max-width:450px;margin:8vh auto">
+<h1 style="color:gold">👑 Gold Hub V9</h1><br>
+<input id=u placeholder="Username">
+<input id=p type=password placeholder="Password"><br><br>
+<div style="color:#ff7777">${msg}</div><br>
+<button onclick="login()">Login</button>
+</div>`;
+}
+
+function login(){
+let u=u=document.getElementById('u').value.trim();
+let p=document.getElementById('p').value;
+if(!u||!p)return loginUI('Fill everything');
+if(!db[u])db[u]={pass:p,notes:[],folders:[],projects:[]};
+if(db[u].pass!==p)return loginUI('Wrong password');
+user=u;localStorage.setItem('ghv9user',u);save();dashboard();
+}
+
+function shell(content,tab='home'){
+app.innerHTML=`<div class="sidebar">
+<div class="logo">👑 GOLD HUB</div>
+<div class="nav ${tab=='home'?'active':''}" onclick="home()">🏠 Home</div>
+<div class="nav ${tab=='notes'?'active':''}" onclick="notes()">📝 Notes</div>
+<div class="nav ${tab=='html'?'active':''}" onclick="htmlPlayer()">🌐 HTML Player</div>
+<div style="position:absolute;bottom:20px;left:15px;right:15px">
+<div class="glass card small">👤 ${user}</div><br>
+<div class="nav" onclick="logout()">🚪 Logout</div>
+</div>
+</div>
+<div class="main">${content}</div>`;
+}
+
+function home(){
+let locked=db[user].notes.filter(n=>n.locked).length;
+shell(`
+<div class="glass card">
+<h1>Welcome ${user}</h1>
+<h2 id="clock" style="color:gold"></h2>
+</div><br>
+<div class="grid">
+<div class="glass card">📝 Notes<br><h1>${db[user].notes.length}</h1></div>
+<div class="glass card">📁 Folders<br><h1>${db[user].folders.length}</h1></div>
+<div class="glass card">🔒 Locked<br><h1>${locked}</h1></div>
+<div class="glass card">🌐 Projects<br><h1>${db[user].projects.length}</h1></div>
+</div>`,'home');
+setInterval(()=>{let c=document.getElementById('clock'); if(c)c.textContent=new Date().toLocaleTimeString()},1000);
+}
+
+function notes(){
+let html=`<div class="glass card"><h2>📝 Notes</h2><br>
+<button onclick="newNote()">+ Note</button>
+<button onclick="newFolder()">+ Folder</button>
+<input placeholder="Search..." oninput="searchNotes(this.value)">
+<br><br><div id="notesWrap">`;
+db[user].folders.forEach(f=>{
+html+=`<div class="noteicon glass">📁<small>${f}</small></div>`;
+});
+db[user].notes.forEach((n,i)=>{
+html+=`<div class="noteicon glass notecard" data-name="${n.title.toLowerCase()}" onclick="openNote(${i})">${n.locked?'🔒':'📝'}<small>${n.title}</small></div>`;
+});
+html+='</div></div>';
+shell(html,'notes');
+}
+
+function searchNotes(q){
+q=q.toLowerCase();
+document.querySelectorAll('.notecard').forEach(n=>{
+n.style.display=n.dataset.name.includes(q)?'inline-flex':'none';
+});
+}
+
+function newFolder(){let n=prompt('Folder name'); if(n){db[user].folders.push(n);save();notes();}}
+function newNote(){db[user].notes.push({title:'New Note',text:'',locked:false,password:''});save();notes();}
+
+function openNote(i){
+let n=db[user].notes[i];
+if(n.locked){
+let p=prompt('Password');
+if(p!==n.password){alert('Wrong password');return;}
+}
+shell(`<div class="glass card">
+<h2>Note Editor</h2>
+<input id="title" value="${n.title.replace(/"/g,'&quot;')}">
+<textarea id="text" style="height:250px">${n.text||''}</textarea><br><br>
+<button onclick="saveNote(${i})">💾 Save</button>
+<button onclick="lockNote(${i})">🔒 Lock</button>
+<button onclick="deleteNote(${i})">🗑 Delete</button>
+<button onclick="notes()">⬅ Back</button>
+</div>`,'notes');
+}
+
+function saveNote(i){db[user].notes[i].title=title.value;db[user].notes[i].text=text.value;save();alert('Saved');}
+function lockNote(i){let p=prompt('Password'); if(!p)return; db[user].notes[i].locked=true; db[user].notes[i].password=p; save();}
+function deleteNote(i){db[user].notes.splice(i,1); save(); notes();}
+
+function htmlPlayer(){
+shell(`<div class="glass card">
+<h2>🌐 HTML Player</h2>
+<input id="proj" placeholder="Project Name">
+<textarea id="code" style="height:220px"><h1>Hello Gold Hub</h1></textarea><br>
+<button onclick="runHTML()">▶ Run</button>
+<button onclick="saveProject()">💾 Save</button>
+<button onclick="fullHTML()">⛶ Fullscreen</button>
+<button onclick="newTabHTML()">🗔 New Tab</button><br><br>
+<iframe id="preview"></iframe>
+</div>`,'html');
+}
+
+function runHTML(){preview.srcdoc=code.value;}
+function fullHTML(){preview.requestFullscreen();}
+function newTabHTML(){let w=window.open('about:blank'); w.document.write(code.value); w.document.close();}
+function saveProject(){db[user].projects.push({name:proj.value||'Untitled',code:code.value}); save(); alert('Saved');}
+
+function logout(){localStorage.removeItem('ghv9user'); location.reload();}
+
+user?dashboard():loginUI();
+function dashboard(){home();}
+</script>
+</body>
+</html>
