@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Gold Lobby Hub</title>
+<title>Gold Lobby Hub FIXED</title>
 
 <style>
 body{
@@ -51,7 +51,6 @@ padding:8px;
 margin:5px;
 border:none;
 border-radius:8px;
-outline:none;
 background:#111;
 color:white;
 }
@@ -68,10 +67,6 @@ background:#ffd700;
 color:black;
 font-weight:bold;
 }
-
-button:hover{opacity:.85}
-
-.nav button{width:30%}
 
 .note{
 background:#111;
@@ -92,11 +87,10 @@ border:none;
 border-radius:50%;
 width:22px;
 height:22px;
-font-size:12px;
 cursor:pointer;
 }
 
-.small{font-size:12px;opacity:.7}
+.nav button{width:30%}
 </style>
 </head>
 
@@ -107,11 +101,14 @@ cursor:pointer;
 <script>
 const app=document.getElementById("app");
 
-// ---------- STORAGE ----------
-const getU=()=>localStorage.getItem("u");
-const setU=u=>localStorage.setItem("u",u);
-const getDB=()=>JSON.parse(localStorage.getItem("db")||"{}");
-const setDB=d=>localStorage.setItem("db",JSON.stringify(d));
+// ---------- SINGLE SOURCE OF TRUTH ----------
+let db = JSON.parse(localStorage.getItem("db")||"{}");
+let user = localStorage.getItem("u");
+
+// SAVE DB ONCE
+function saveDB(){
+localStorage.setItem("db",JSON.stringify(db));
+}
 
 // ---------- LOGIN ----------
 function loginUI(msg=""){
@@ -134,23 +131,22 @@ let p=document.getElementById("p").value;
 
 if(!u||!p)return loginUI("Fill everything");
 
-let db=getDB();
-
 if(!db[u]){
 db[u]={pass:p,notes:[]};
 }
 
 if(db[u].pass!==p)return loginUI("Wrong password ❌");
 
-setDB(db);
-setU(u);
+user=u;
+localStorage.setItem("u",user);
+
+saveDB();
 lobby();
 }
 
 // ---------- LOBBY ----------
 function lobby(){
-let u=getU();
-if(!u)return loginUI();
+if(!user)return loginUI();
 
 app.innerHTML=`
 <div class="card">
@@ -171,14 +167,10 @@ app.innerHTML=`
 show("notes");
 }
 
-// ---------- VIEWS ----------
+// ---------- VIEW ----------
 function show(type){
-let u=getU();
-let db=getDB();
-let v=document.getElementById("view");
 
-// always re-sync
-db=getDB();
+let v=document.getElementById("view");
 
 if(type==="games"){
 v.innerHTML=`<h3>🎮 Games</h3><p>Coming soon...</p>`;
@@ -189,7 +181,7 @@ v.innerHTML=`<h3>🎬 Movies</h3><p>Coming soon...</p>`;
 }
 
 if(type==="notes"){
-let notes=db[u].notes;
+let notes=db[user].notes;
 
 v.innerHTML=`
 <h3>📝 Notes</h3>
@@ -214,60 +206,42 @@ box.innerHTML+=`
 
 // ---------- NOTES ----------
 function addNote(){
-let u=getU();
-let db=getDB();
-
-db=getDB();
-db[u].notes.push({title:"New Note",text:""});
-
-setDB(db);
+db[user].notes.push({title:"New Note",text:""});
+saveDB();
 show("notes");
 }
 
 function edit(i,val){
-let u=getU();
-let db=getDB();
-
-db=getDB();
-db[u].notes[i].text=val;
-
-setDB(db);
+db[user].notes[i].text=val;
+saveDB();
 }
 
 function rename(i,val){
-let u=getU();
-let db=getDB();
-
-db=getDB();
-db[u].notes[i].title=val;
-
-setDB(db);
+db[user].notes[i].title=val;
+saveDB();
 }
 
 function del(i){
-let u=getU();
-let db=getDB();
-
-db=getDB();
-db[u].notes.splice(i,1);
-
-setDB(db);
+db[user].notes.splice(i,1);
+saveDB();
 show("notes");
 }
 
 // ---------- SAVE ----------
 function save(){
+saveDB();
 alert("💾 Saved!");
 }
 
 // ---------- LOGOUT ----------
 function logout(){
 localStorage.removeItem("u");
+user=null;
 loginUI();
 }
 
 // ---------- START ----------
-getU()?lobby():loginUI();
+user ? lobby() : loginUI();
 </script>
 
 </body>
