@@ -1,1 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Games</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
 
+<div class="container">
+
+<h1>🎮 Games</h1>
+
+<p>Put your games here later.</p>
+
+<a href="../index.html">
+<button>Back Home</button>
+</a>
+
+</div>
+
+</body>
+</html>
