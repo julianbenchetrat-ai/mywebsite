@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gold Hub V6</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Arial,sans-serif;background:#050505;color:white;overflow:hidden}
+.bg{position:fixed;inset:0;pointer-events:none;background:
+radial-gradient(circle at 20% 20%,rgba(255,215,0,.15),transparent 25%),
+radial-gradient(circle at 80% 30%,rgba(255,215,0,.12),transparent 20%)}
+.sidebar{position:fixed;left:0;top:0;width:100px;height:100%;background:#111;border-right:1px solid #333;padding-top:20px}
+.icon{width:60px;height:60px;margin:10px auto;border-radius:18px;background:#1b1b1b;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.main{margin-left:100px;height:100vh;overflow:auto;padding:20px}
+.glass{background:rgba(20,20,20,.8);backdrop-filter:blur(15px);border:1px solid rgba(255,215,0,.2);border-radius:24px}
+.login{width:min(450px,90%);margin:8vh auto;padding:25px}
+button{padding:10px 14px;border:none;border-radius:12px;background:gold;font-weight:bold;cursor:pointer}
+input,textarea{width:100%;padding:10px;margin-top:8px;background:#161616;color:white;border:1px solid #333;border-radius:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:15px}
+.tile{padding:18px;text-align:center;cursor:pointer}
+iframe{width:100%;height:400px;border:none;background:white;border-radius:12px}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div id="app"></div>
+<script>
+let db=JSON.parse(localStorage.getItem("ghv6")||"{}");
+let user=localStorage.getItem("ghuser");
+const app=document.getElementById("app");
+function save(){localStorage.setItem("ghv6",JSON.stringify(db));}
+
+function loginUI(msg=""){
+app.innerHTML=`<div class="glass login">
+<h1 style="color:gold">👑 GOLD HUB V6</h1><br>
+<input id=u placeholder=Username>
+<input id=p type=password placeholder=Password><br><br>
+<div style="color:#ff8888">${msg}</div><br>
+<button onclick=login()>Enter</button>
+</div>`;
+}
+function login(){
+let u=document.getElementById('u').value.trim();
+let p=document.getElementById('p').value;
+if(!u||!p)return loginUI("Fill everything");
+if(!db[u])db[u]={pass:p,notes:[],folders:[]};
+if(db[u].pass!==p)return loginUI("Wrong password");
+user=u;localStorage.setItem("ghuser",u);save();dash();
+}
+
+function dash(){
+app.innerHTML=`
+<div class=sidebar>
+<div class="icon glass" onclick="home()">🏠</div>
+<div class="icon glass" onclick="notes()">📝</div>
+<div class="icon glass" onclick="htmlPlayer()">🌐</div>
+<div class="icon glass" onclick="logout()">🚪</div>
+</div>
+<div class=main><div id=view></div></div>`;
+home();
+}
+
+function home(){
+view.innerHTML=`<div class="glass" style="padding:25px">
+<h1 style="color:gold">Welcome ${user}</h1>
+<p>Notes, Files and HTML Projects</p>
+</div>`;
+}
+
+function notes(){
+let h=`<div class="glass" style="padding:20px">
+<h2>📝 Notes & Files</h2><br>
+<button onclick="newNote()">+ Note</button>
+<button onclick="newFolder()">+ Folder</button><br><br>
+<div class=grid>`;
+
+db[user].folders.forEach((f,i)=>{
+h+=`<div class="tile glass">📁<br>${f}<br><button onclick="renameFolder(${i})">Rename</button></div>`;
+});
+
+db[user].notes.forEach((n,i)=>{
+h+=`<div class="tile glass" onclick="openNote(${i})">📝<br>${n.title}${n.locked?" 🔒":""}</div>`;
+});
+
+h+=`</div></div>`;
+view.innerHTML=h;
+}
+
+function newFolder(){
+let n=prompt("Folder name");
+if(!n)return;
+db[user].folders.push(n);save();notes();
+}
+
+function renameFolder(i){
+let n=prompt("New folder name",db[user].folders[i]);
+if(!n)return;
+db[user].folders[i]=n;save();notes();
+}
+
+function newNote(){
+db[user].notes.push({title:"New Note",text:"",locked:false,password:""});
+save();notes();
+}
+
+function openNote(i){
+let n=db[user].notes[i];
+if(n.locked){
+let p=prompt("Password");
+if(p!==n.password){alert("Wrong password");return;}
+}
+view.innerHTML=`<div class="glass" style="padding:20px">
+<h2>Note Editor</h2>
+<input id=title value="${(n.title||'').replace(/"/g,'&quot;')}">
+<textarea id=text style="height:250px">${n.text||""}</textarea><br><br>
+<button onclick="saveNote(${i})">💾 Save Changes</button>
+<button onclick="renameNote(${i})">✏ Rename</button>
+<button onclick="lockNote(${i})">🔒 Lock Note</button>
+<button onclick="deleteNote(${i})">🗑 Delete</button>
+<button onclick="notes()">⬅ Back</button>
+</div>`;
+}
+
+function saveNote(i){
+db[user].notes[i].title=title.value;
+db[user].notes[i].text=text.value;
+save();alert("Saved");
+}
+function renameNote(i){
+let n=prompt("New name",db[user].notes[i].title);
+if(n){db[user].notes[i].title=n;save();openNote(i);}
+}
+function lockNote(i){
+let p=prompt("Password for note");
+if(!p)return;
+db[user].notes[i].locked=true;
+db[user].notes[i].password=p;
+save();alert("Locked");
+}
+function deleteNote(i){
+db[user].notes.splice(i,1);save();notes();
+}
+
+function htmlPlayer(){
+view.innerHTML=`<div class="glass" style="padding:20px">
+<h2>🌐 HTML Player</h2>
+<textarea id=code style="height:220px"><h1>Hello Gold Hub</h1></textarea><br>
+<button onclick="runHTML()">▶ Run HTML</button><br><br>
+<iframe id=preview></iframe>
+</div>`;
+}
+function runHTML(){
+preview.srcdoc=code.value;
+}
+
+function logout(){localStorage.removeItem("ghuser");location.reload();}
+
+user?dash():loginUI();
+</script>
+</body>
+</html>
