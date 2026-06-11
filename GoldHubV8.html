@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gold Hub V8</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Segoe UI,sans-serif;background:#050505;color:white}
+body:before{content:'';position:fixed;inset:0;background:
+radial-gradient(circle at 20% 20%,rgba(255,215,0,.18),transparent 25%),
+radial-gradient(circle at 80% 30%,rgba(255,215,0,.12),transparent 25%)}
+.sidebar{position:fixed;left:0;top:0;width:90px;height:100%;background:#0d0d0d;border-right:1px solid #333}
+.icon{width:58px;height:58px;margin:16px auto;border-radius:18px;background:#181818;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.25s}
+.icon:hover,.active{box-shadow:0 0 25px gold,0 0 50px rgba(255,215,0,.4);transform:translateY(-2px)}
+.main{margin-left:90px;padding:20px}
+.glass{background:rgba(20,20,20,.75);backdrop-filter:blur(18px);border:1px solid rgba(255,215,0,.2);border-radius:24px;box-shadow:0 0 20px rgba(255,215,0,.08)}
+.card{padding:20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px}
+.noteicon{width:110px;height:110px;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;margin:8px;cursor:pointer}
+.noteicon:hover{box-shadow:0 0 20px gold}
+button{padding:10px 14px;border:none;border-radius:12px;background:gold;font-weight:bold;cursor:pointer}
+textarea,input{width:100%;padding:10px;margin-top:8px;background:#151515;color:#fff;border:1px solid #333;border-radius:12px}
+iframe{width:100%;height:400px;border:none;background:#fff;border-radius:12px}
+</style>
+</head>
+<body>
+<div class="sidebar">
+<div class="icon active">🏠</div>
+<div class="icon">📝</div>
+<div class="icon">🌐</div>
+</div>
+<div class="main">
+<div class="glass card">
+<h1 style="color:gold">👑 Gold Hub V8</h1>
+<p>Premium concept update</p>
+</div><br>
+
+<div class="grid">
+<div class="glass card"><h3>⏰ Clock</h3><h2 id="clock"></h2></div>
+<div class="glass card"><h3>📝 Notes</h3><h2>12</h2></div>
+<div class="glass card"><h3>📁 Folders</h3><h2>4</h2></div>
+<div class="glass card"><h3>🌐 Projects</h3><h2>3</h2></div>
+</div>
+
+<br>
+
+<div class="glass card">
+<h2>📝 Note Icons</h2><br>
+<div class="noteicon glass">📝<small>Ideas</small></div>
+<div class="noteicon glass">📝<small>School</small></div>
+<div class="noteicon glass">🔒<small>Private</small></div>
+</div>
+
+<br>
+
+<div class="glass card">
+<h2>🌐 HTML Player</h2>
+<textarea id="code"><h1>Hello Gold Hub</h1></textarea><br>
+<button onclick="runHTML()">▶ Run</button>
+<button onclick="fullHTML()">⛶ Fullscreen</button>
+<button onclick="newTabHTML()">🗔 New Tab</button>
+<br><br>
+<iframe id="preview"></iframe>
+</div>
+</div>
+
+<script>
+setInterval(()=>{
+document.getElementById('clock').textContent=new Date().toLocaleTimeString();
+},1000);
+
+function runHTML(){
+preview.srcdoc=code.value;
+}
+function fullHTML(){
+preview.requestFullscreen();
+}
+function newTabHTML(){
+const w=window.open('about:blank');
+w.document.write(code.value);
+w.document.close();
+}
+</script>
+</body>
+</html>
