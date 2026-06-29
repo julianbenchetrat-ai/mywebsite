@@ -258,9 +258,46 @@
   .enginerow .lab{font-size:12.5px;color:var(--muted);margin-right:2px}
   .errbox{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px;color:var(--muted);font-size:13.5px;line-height:1.6}
 
+  /* block builder */
+  .bcol{width:48%;min-width:300px;border-right:1px solid var(--line);overflow:auto;background:#fbfaf7;padding:14px}
+  .themecard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-bottom:14px}
+  .themecard .tt{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:11px}
+  .row3{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+  .row3>.field{flex:1;min-width:120px;margin-bottom:0}
+  .field{margin-bottom:11px}
+  .field>label{display:block;font-size:11.5px;font-weight:600;color:#5a6172;margin-bottom:5px}
+  .field input[type=text],.field textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-family:inherit;font-size:13.5px;outline:none;background:#fff;color:var(--ink)}
+  .field textarea{resize:vertical;min-height:56px;line-height:1.5}
+  .field input[type=text]:focus,.field textarea:focus{border-color:var(--mine)}
+  .field.color{display:flex;align-items:center;gap:9px}
+  .field.color>label{margin:0;flex:1}
+  .field.color input[type=color]{width:40px;height:32px;border:1px solid var(--line);border-radius:8px;background:#fff;padding:2px;cursor:pointer;flex:0 0 auto}
+  .field.check{display:flex;align-items:center;gap:8px}
+  .field.check>label{margin:0;font-size:13px;color:#3a4251}
+  .field.check input{width:16px;height:16px;accent-color:var(--mine)}
+  .hintline{font-size:12.5px;color:var(--muted);margin:2px 0 0}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .seg button{border:none;background:#fff;padding:7px 12px;font-size:12.5px;cursor:pointer;color:#5a6172;font-family:inherit;border-left:1px solid var(--line)}
+  .seg button:first-child{border-left:none}
+  .seg button.on{background:var(--mine);color:#fff}
+  .bcard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:13px;margin-bottom:11px}
+  .bcard-head{display:flex;align-items:center;gap:8px;margin-bottom:11px}
+  .bcard-head .ico{width:26px;height:26px;border-radius:7px;background:var(--mine-soft);display:grid;place-items:center;font-size:14px;flex:0 0 auto}
+  .bcard-head .nm{font-size:12.5px;font-weight:700;color:#3a4251;flex:1}
+  .bcard-head button{border:none;background:#f1efe9;color:#5a6172;width:27px;height:27px;border-radius:7px;cursor:pointer;font-size:13px;flex:0 0 auto}
+  .bcard-head button:hover{background:#e6e3db}
+  .bcard-head button.del:hover{background:#fbe3dd;color:#c0432a}
+  .palette{background:#fff;border:1.5px dashed var(--mine);border-radius:12px;padding:13px;margin-top:4px}
+  .palette .pt{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mine);margin-bottom:10px}
+  .palgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}
+  .palbtn{display:flex;flex-direction:column;align-items:center;gap:5px;border:1px solid var(--line);background:#fff;border-radius:10px;padding:11px 6px;cursor:pointer;font-size:11.5px;font-weight:600;color:#3a4251;transition:border-color .12s,background .12s}
+  .palbtn:hover{border-color:var(--mine);background:var(--mine-soft)}
+  .palbtn .pi{font-size:18px;line-height:1}
+
   @media(max-width:640px){
     .editor .ebody{flex-direction:column}
     .editor .codepane{width:auto;border-right:none;border-bottom:1px solid var(--line);height:45%}
+    .bcol{width:auto;border-right:none;border-bottom:1px solid var(--line);height:55%}
     .home{padding:34px 18px}
     .btn span.lbl{display:none}
   }
@@ -581,92 +618,290 @@ async function renderMine(url){
   stage.appendChild(f);
 }
 
-/* ---------- CREATE: the site builder ---------- */
-const STARTER = `<!doctype html>
-<html>
-<head>
-<meta charset="utf-8">
-<style>
-  body{
-    font-family: system-ui, sans-serif;
-    background: #fff7ed;
-    color: #3a2a1d;
-    display: grid; place-items: center; min-height: 100vh; margin: 0;
-    text-align: center;
+/* ======================================================================
+   CREATE: the site builder.  Two modes:
+     • build  — a no-code block builder (the easy, default path)
+     • code   — the raw HTML/CSS/JS editor (the "I have the code" path)
+   Block sites store {blocks, theme, html}; code sites store {html} only.
+   ====================================================================== */
+const el = (tag, cls, html) => { const n=document.createElement(tag); if(cls)n.className=cls; if(html!=null)n.innerHTML=html; return n; };
+const bid = () => "b"+Math.random().toString(36).slice(2,8);
+
+function fontStack(f){
+  if (f==="serif") return "Georgia, 'Times New Roman', serif";
+  if (f==="play")  return "'Comic Sans MS', 'Chalkboard SE', 'Trebuchet MS', sans-serif";
+  if (f==="mono")  return "'JetBrains Mono', ui-monospace, monospace";
+  return "system-ui, -apple-system, 'Segoe UI', sans-serif";
+}
+const BLOCKS = [
+  ["hero","🏔️","Banner"], ["heading","🔠","Heading"], ["text","📝","Text"],
+  ["button","🔘","Button"], ["image","🖼️","Picture"], ["card","🗂️","Card"],
+  ["divider","➖","Divider"], ["spacer","↕️","Space"],
+];
+function defaultBlock(type){
+  const base = {id:bid(), type};
+  const d = {
+    hero:    {title:"Big title", subtitle:"A little subtitle", bg:"#41a784", color:"#ffffff"},
+    heading: {text:"A heading", size:"m", align:"left"},
+    text:    {text:"Some words go here. Type whatever you like!", align:"left"},
+    button:  {label:"Click me", link:"https://", color:"#ef6f53", align:"left"},
+    image:   {url:"https://picsum.photos/600/320", alt:"", rounded:true},
+    card:    {title:"Card title", body:"A box with a title and some text.", bg:"#ffffff"},
+    divider: {},
+    spacer:  {size:"m"},
+  }[type] || {};
+  return Object.assign(base, d);
+}
+function starterBlocks(){
+  return [
+    Object.assign({id:bid(),type:"hero"},   {title:"My Awesome Page", subtitle:"Made with Burrow", bg:"#41a784", color:"#ffffff"}),
+    Object.assign({id:bid(),type:"text"},   {text:"Welcome! Change these blocks on the left and watch the preview update. Add more with the buttons at the bottom.", align:"left"}),
+    Object.assign({id:bid(),type:"button"}, {label:"Click me", link:"https://example.com", color:"#ef6f53", align:"left"}),
+  ];
+}
+
+function blockHtml(b, theme){
+  const e = escapeHtml;
+  switch(b.type){
+    case "hero":
+      return `<section style="background:${b.bg};color:${b.color};padding:56px 24px;border-radius:16px;text-align:center;margin:0 0 18px">
+        <h1 style="margin:0 0 8px;font-size:34px;line-height:1.15">${e(b.title)}</h1>
+        ${b.subtitle?`<p style="margin:0;opacity:.9;font-size:17px">${e(b.subtitle)}</p>`:""}</section>`;
+    case "heading": {
+      const sz={s:20,m:27,l:35}[b.size||"m"];
+      return `<h2 style="text-align:${b.align||'left'};font-size:${sz}px;margin:20px 0 8px;line-height:1.2">${e(b.text)}</h2>`;
+    }
+    case "text":
+      return `<p style="text-align:${b.align||'left'};line-height:1.65;margin:0 0 14px;font-size:16px">${e(b.text).replace(/\n/g,"<br>")}</p>`;
+    case "button": {
+      const href=e(b.link||"#"); const ext=/^https?:/i.test(b.link||"");
+      return `<div style="text-align:${b.align||'left'};margin:8px 0 16px">
+        <a href="${href}" ${ext?'target="_blank" rel="noopener"':''} style="display:inline-block;background:${b.color||theme.accent};color:#fff;text-decoration:none;padding:13px 24px;border-radius:11px;font-weight:600;font-size:15px">${e(b.label||"Button")}</a></div>`;
+    }
+    case "image":
+      return b.url ? `<img src="${e(b.url)}" alt="${e(b.alt||'')}" style="max-width:100%;display:block;margin:0 auto 16px;border-radius:${b.rounded?16:4}px" />` : "";
+    case "card":
+      return `<div style="background:${b.bg||'#ffffff'};border:1px solid rgba(0,0,0,.09);border-radius:14px;padding:18px 20px;margin:0 0 16px">
+        <h3 style="margin:0 0 6px;font-size:19px">${e(b.title)}</h3>
+        <p style="margin:0;line-height:1.55;opacity:.85">${e(b.body).replace(/\n/g,"<br>")}</p></div>`;
+    case "divider":
+      return `<hr style="border:none;border-top:1px solid rgba(0,0,0,.13);margin:20px 0" />`;
+    case "spacer": {
+      const h={s:16,m:38,l:74}[b.size||"m"];
+      return `<div style="height:${h}px"></div>`;
+    }
+    default: return "";
   }
-  h1{ font-size: 44px; margin: 0 0 8px; }
-  p{ color: #8a6d57; }
-  button{
-    margin-top: 18px; padding: 12px 22px; border: none; border-radius: 10px;
-    background: #41a784; color: #fff; font-size: 15px; cursor: pointer;
-  }
-</style>
-</head>
-<body>
-  <div>
-    <h1>👋 My first site</h1>
-    <p>Edit the code on the left — this preview updates live.</p>
-    <button onclick="alert('It works! Now make it yours.')">Click me</button>
-  </div>
-</body>
-</html>`;
+}
+function blocksToHtml(name, theme, blocks){
+  const body = blocks.map(b=>blockHtml(b,theme)).join("\n");
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(name||"My site")}</title></head>
+<body style="margin:0;background:${theme.bg};font-family:${fontStack(theme.font)};color:#222">
+  <main style="max-width:680px;margin:0 auto;padding:32px 20px 64px">
+${body}
+  </main>
+</body></html>`;
+}
 
 async function renderEditor(url){
   const slug = url.startsWith("create://") ? url.slice("create://".length) : "";
   const existing = slug ? await Store.get(slug) : null;
   setTitle(existing ? "Editing "+existing.name : "New site");
 
-  stage.innerHTML = `
-    <div class="editor">
-      <div class="ehead">
-        <div class="mlogo">B</div>
-        <input class="name" id="sname" placeholder="Name your site…" value="${existing?escapeHtml(existing.name):""}" />
-        <div class="spacer"></div>
-        <button class="btn ghost" id="ecancel">Cancel</button>
-        <button class="btn mine" id="esave">Save site</button>
-      </div>
-      <div class="ebody">
-        <div class="codepane">
-          <div class="codetab">HTML · CSS · JS — your page</div>
-          <textarea id="scode" spellcheck="false"></textarea>
-        </div>
-        <div class="preview">
-          <div class="prevtab"><span class="dot"></span> Live preview</div>
-          <iframe class="prev" id="sprev" sandbox="allow-scripts allow-forms allow-popups allow-modals"></iframe>
-        </div>
-      </div>
-    </div>`;
-
-  const code = $("#scode");
-  const prev = $("#sprev");
-  const nameI = $("#sname");
-  code.value = existing ? existing.html : STARTER;
-
-  let timer=null;
-  const sync = ()=>{ prev.srcdoc = code.value; };
-  sync();
-  code.addEventListener("input", ()=>{ clearTimeout(timer); timer=setTimeout(sync, 250); });
-  // allow real tabs in the textarea
-  code.addEventListener("keydown", (e)=>{
-    if (e.key==="Tab"){ e.preventDefault();
-      const s=code.selectionStart, en=code.selectionEnd;
-      code.value = code.value.slice(0,s)+"  "+code.value.slice(en);
-      code.selectionStart=code.selectionEnd=s+2;
-    }
-  });
-
-  $("#ecancel").onclick = ()=> existing ? navigate("mine://"+existing.slug,{replace:true}) : navigate("home://",{replace:true});
-  $("#esave").onclick = async ()=>{
-    const name = nameI.value.trim();
-    if (!name){ nameI.focus(); nameI.style.borderColor="var(--accent)"; return; }
-    const finalSlug = existing ? existing.slug : await uniqueSlug(slugify(name));
-    const now = Date.now();
-    await Store.save({
-      slug: finalSlug, name, html: code.value,
-      created: existing ? existing.created : now, updated: now
-    });
-    navigate("mine://"+finalSlug, {replace:true});
+  const st = {
+    name: existing?.name || "",
+    slug: existing?.slug || "",
+    created: existing?.created || Date.now(),
+    mode: existing ? (existing.blocks ? "build" : "code") : "build",
+    hasBlocks: !!(existing?.blocks),
+    theme: existing?.theme ? {...existing.theme} : {bg:"#fff7ed", accent:"#41a784", font:"sans"},
+    blocks: existing?.blocks ? JSON.parse(JSON.stringify(existing.blocks)) : starterBlocks(),
+    code: (existing && !existing.blocks) ? existing.html : "",
   };
+
+  function currentHtml(){ return st.mode==="code" ? st.code : blocksToHtml(st.name, st.theme, st.blocks); }
+
+  function paint(){
+    stage.innerHTML = `
+      <div class="editor">
+        <div class="ehead">
+          <div class="mlogo">B</div>
+          <input class="name" id="sname" placeholder="Name your site…" value="${escapeHtml(st.name)}" />
+          <div class="spacer"></div>
+          <button class="btn ghost" id="emode">${st.mode==="build" ? "&lt;/&gt; Code" : "🧱 Blocks"}</button>
+          <button class="btn ghost" id="ecancel">Cancel</button>
+          <button class="btn mine" id="esave">Save site</button>
+        </div>
+        <div class="ebody" id="ebody"></div>
+      </div>`;
+
+    $("#sname").addEventListener("input", e=>{ st.name = e.target.value; });
+    $("#ecancel").onclick = ()=> existing ? navigate("mine://"+existing.slug,{replace:true}) : navigate("home://",{replace:true});
+    $("#esave").onclick = save;
+    $("#emode").onclick = ()=>{
+      if (st.mode==="build"){ st.code = currentHtml(); st.mode="code"; }
+      else { st.mode="build"; }   // returning to blocks ignores manual code edits
+      paint();
+    };
+
+    if (st.mode==="build") paintBuilder();
+    else paintCode();
+  }
+
+  /* ---- BLOCK BUILDER ---- */
+  function paintBuilder(){
+    const body = $("#ebody");
+    body.innerHTML = `
+      <div class="bcol">
+        <div class="themecard" id="themecard"></div>
+        <div id="blocklist"></div>
+        <div class="palette">
+          <div class="pt">＋ Add a block</div>
+          <div class="palgrid" id="palgrid"></div>
+        </div>
+      </div>
+      <div class="preview">
+        <div class="prevtab"><span class="dot"></span> Live preview</div>
+        <iframe class="prev" id="sprev" sandbox="allow-scripts allow-forms allow-popups allow-modals"></iframe>
+      </div>`;
+
+    // theme controls
+    const tc = $("#themecard");
+    tc.appendChild(el("div","tt","🎨 Page style"));
+    const trow = el("div","row3");
+    trow.appendChild(colorField("Background", st.theme.bg, v=>{ st.theme.bg=v; refresh(); }));
+    trow.appendChild(colorField("Accent", st.theme.accent, v=>{ st.theme.accent=v; refresh(); }));
+    tc.appendChild(trow);
+    tc.appendChild(segField("Font", [["sans","Sans"],["serif","Serif"],["play","Playful"],["mono","Mono"]], st.theme.font, v=>{ st.theme.font=v; refresh(); }));
+
+    // block cards
+    const list = $("#blocklist");
+    st.blocks.forEach((b,i)=> list.appendChild(blockCard(b,i)));
+
+    // palette
+    const pg = $("#palgrid");
+    for (const [type,icon,label] of BLOCKS){
+      const pb = el("button","palbtn",`<span class="pi">${icon}</span>${label}`);
+      pb.onclick = ()=>{ st.blocks.push(defaultBlock(type)); paintBuilder(); };
+      pg.appendChild(pb);
+    }
+    refresh();
+  }
+
+  function blockCard(b,i){
+    const card = el("div","bcard");
+    const def = BLOCKS.find(x=>x[0]===b.type) || ["?","▫️",b.type];
+    const head = el("div","bcard-head",
+      `<span class="ico">${def[1]}</span><span class="nm">${def[2]}</span>`);
+    const up = el("button",null,"↑"); up.title="Move up";
+    const dn = el("button",null,"↓"); dn.title="Move down";
+    const rm = el("button","del","✕"); rm.title="Delete";
+    up.onclick=()=>{ if(i>0){ [st.blocks[i-1],st.blocks[i]]=[st.blocks[i],st.blocks[i-1]]; paintBuilder(); } };
+    dn.onclick=()=>{ if(i<st.blocks.length-1){ [st.blocks[i+1],st.blocks[i]]=[st.blocks[i],st.blocks[i+1]]; paintBuilder(); } };
+    rm.onclick=()=>{ st.blocks.splice(i,1); paintBuilder(); };
+    head.append(up,dn,rm);
+    card.appendChild(head);
+
+    const set = (k,v)=>{ b[k]=v; refresh(); };
+    switch(b.type){
+      case "hero":
+        card.append(textField("Title", b.title, v=>set("title",v)),
+                    textField("Subtitle", b.subtitle, v=>set("subtitle",v)),
+                    rowOf(colorField("Banner color", b.bg, v=>set("bg",v)),
+                          colorField("Text color", b.color, v=>set("color",v))));
+        break;
+      case "heading":
+        card.append(textField("Words", b.text, v=>set("text",v)),
+                    rowOf(segField("Size",[["s","S"],["m","M"],["l","L"]], b.size||"m", v=>set("size",v)),
+                          segField("Align",[["left","⬅"],["center","⬌"],["right","➡"]], b.align||"left", v=>set("align",v))));
+        break;
+      case "text":
+        card.append(areaField("Words", b.text, v=>set("text",v)),
+                    segField("Align",[["left","⬅"],["center","⬌"],["right","➡"]], b.align||"left", v=>set("align",v)));
+        break;
+      case "button":
+        card.append(textField("Button label", b.label, v=>set("label",v)),
+                    textField("Links to (https://…)", b.link, v=>set("link",v)),
+                    rowOf(colorField("Color", b.color, v=>set("color",v)),
+                          segField("Align",[["left","⬅"],["center","⬌"],["right","➡"]], b.align||"left", v=>set("align",v))));
+        break;
+      case "image":
+        card.append(textField("Picture link (https://…)", b.url, v=>set("url",v)),
+                    textField("Description", b.alt, v=>set("alt",v)),
+                    checkField("Rounded corners", b.rounded, v=>set("rounded",v)));
+        break;
+      case "card":
+        card.append(textField("Title", b.title, v=>set("title",v)),
+                    areaField("Text", b.body, v=>set("body",v)),
+                    colorField("Box color", b.bg, v=>set("bg",v)));
+        break;
+      case "spacer":
+        card.append(segField("Height",[["s","Small"],["m","Medium"],["l","Large"]], b.size||"m", v=>set("size",v)));
+        break;
+      case "divider":
+        card.append(el("p","hintline","A thin line across the page."));
+        break;
+    }
+    return card;
+  }
+
+  /* ---- CODE EDITOR ---- */
+  function paintCode(){
+    const body = $("#ebody");
+    if (!st.code) st.code = blocksToHtml(st.name, st.theme, st.blocks);
+    body.innerHTML = `
+      <div class="codepane">
+        <div class="codetab">HTML · CSS · JS — your page</div>
+        <textarea id="scode" spellcheck="false"></textarea>
+      </div>
+      <div class="preview">
+        <div class="prevtab"><span class="dot"></span> Live preview</div>
+        <iframe class="prev" id="sprev" sandbox="allow-scripts allow-forms allow-popups allow-modals"></iframe>
+      </div>`;
+    const code = $("#scode");
+    code.value = st.code;
+    let t=null;
+    code.addEventListener("input", ()=>{ st.code=code.value; clearTimeout(t); t=setTimeout(refresh,220); });
+    code.addEventListener("keydown", e=>{
+      if (e.key==="Tab"){ e.preventDefault(); const s=code.selectionStart, en=code.selectionEnd;
+        code.value=code.value.slice(0,s)+"  "+code.value.slice(en); code.selectionStart=code.selectionEnd=s+2; st.code=code.value; }
+    });
+    refresh();
+  }
+
+  function refresh(){ const f=$("#sprev"); if(f) f.srcdoc = currentHtml(); }
+
+  async function save(){
+    if (!st.name.trim()){ const n=$("#sname"); n.focus(); n.style.borderColor="var(--accent)"; return; }
+    const finalSlug = existing ? existing.slug : await uniqueSlug(slugify(st.name));
+    const now = Date.now();
+    const site = { slug:finalSlug, name:st.name.trim(), html:currentHtml(),
+                   created: st.created, updated: now };
+    if (st.mode==="build"){ site.blocks = st.blocks; site.theme = st.theme; }
+    await Store.save(site);
+    navigate("mine://"+finalSlug, {replace:true});
+  }
+
+  paint();
+}
+
+/* small labeled-field builders for the block editor */
+function fieldWrap(label, control){ const w=el("div","field"); if(label){ const l=document.createElement("label"); l.textContent=label; w.appendChild(l);} w.appendChild(control); return w; }
+function rowOf(...nodes){ const r=el("div","row3"); nodes.forEach(n=>r.appendChild(n)); return r; }
+function textField(label,val,on){ const i=document.createElement("input"); i.type="text"; i.value=val||""; i.addEventListener("input",e=>on(e.target.value)); return fieldWrap(label,i); }
+function areaField(label,val,on){ const t=document.createElement("textarea"); t.value=val||""; t.addEventListener("input",e=>on(e.target.value)); return fieldWrap(label,t); }
+function colorField(label,val,on){ const w=el("div","field color"); const l=document.createElement("label"); l.textContent=label; const i=document.createElement("input"); i.type="color"; i.value=val||"#000000"; i.addEventListener("input",e=>on(e.target.value)); w.append(l,i); return w; }
+function checkField(label,val,on){ const w=el("div","field check"); const i=document.createElement("input"); i.type="checkbox"; i.checked=!!val; i.addEventListener("change",e=>on(e.target.checked)); const l=document.createElement("label"); l.textContent=label; w.append(i,l); return w; }
+function segField(label,opts,val,on){
+  const seg=el("div","seg");
+  opts.forEach(([v,lab])=>{ const b=document.createElement("button"); b.textContent=lab; if(v===val)b.className="on";
+    b.onclick=()=>{ on(v); seg.querySelectorAll("button").forEach(x=>x.classList.remove("on")); b.classList.add("on"); }; seg.appendChild(b); });
+  return fieldWrap(label,seg);
+}
+async function uniqueSlug(base){
+  let s=base, n=2;
+  while (await Store.get(s)){ s = base+"-"+n; n++; }
+  return s;
 }
 async function uniqueSlug(base){
   let s=base, n=2;
@@ -692,10 +927,10 @@ async function renderSearch(url){
   stage.innerHTML = `
     <div class="scroll"><div class="results">
       <p class="q">${escapeHtml(q)}</p>
-      <p class="qsub">Searched across the web and your own sites</p>
+      <p class="qsub">Results from across the web and your own sites</p>
       <div id="minehits"></div>
-      <div id="weblist"><div class="searchload"><div class="spin"></div> Searching the web…</div></div>
-      <div class="enginerow"><span class="lab">Open this search in a real tab:</span></div>
+      <div id="weblist"><div class="searchload"><div class="spin"></div> Searching…</div></div>
+      <div class="enginerow"><span class="lab">Want the full web? Open in a real tab:</span></div>
     </div></div>`;
 
   // matches from the user's own sites
@@ -717,49 +952,68 @@ async function renderSearch(url){
     er.appendChild(b);
   }
 
-  // live web results — guard against the tab navigating away mid-request
-  try {
-    const results = await webSearch(q);
-    if (curUrl(activeTab()) !== url) return;
-    const list = $("#weblist");
-    if (!results.length){ list.innerHTML = `<div class="errbox">No live results came back — try one of the engines below.</div>`; return; }
-    list.innerHTML = "";
-    for (const r of results){
-      let host = r.url; try{ host = new URL(r.url).hostname.replace(/^www\./,""); }catch(e){}
-      const a = document.createElement("div"); a.className="result";
-      a.onclick = ()=> navigate(r.url);
-      a.innerHTML = `<p class="rhost">${escapeHtml(host)}</p>
-                     <h3>${escapeHtml(r.title||r.url)}</h3>
-                     <p>${escapeHtml(r.snippet||"")}</p>`;
-      list.appendChild(a);
-    }
-  } catch(e){
-    if (curUrl(activeTab()) !== url) return;
-    const list = $("#weblist");
-    if (list) list.innerHTML = `<div class="errbox">Live results aren't reachable here — that needs Burrow running inside Claude (a downloaded copy can't call the search service). The engine buttons below always work.</div>`;
+  // inline results from keyless, CORS-friendly sources
+  let results = [];
+  try { results = await searchAll(q); } catch(e){ results = []; }
+  if (curUrl(activeTab()) !== url) return;     // user navigated away mid-request
+  const list = $("#weblist");
+  if (!list) return;
+  if (!results.length){
+    list.innerHTML = `<div class="errbox">No inline results for “${escapeHtml(q)}”. The engine buttons below open the full web for this search.</div>`;
+    return;
+  }
+  list.innerHTML = "";
+  for (const r of results){
+    let host = r.url; try{ host = new URL(r.url).hostname.replace(/^www\./,""); }catch(e){}
+    const a = document.createElement("div"); a.className="result";
+    a.onclick = ()=> navigate(r.url);
+    a.innerHTML = `<p class="rhost">${escapeHtml(host)}${r.src?` · ${escapeHtml(r.src)}`:""}</p>
+                   <h3>${escapeHtml(r.title||r.url)}</h3>
+                   <p>${escapeHtml(r.snippet||"")}</p>`;
+    list.appendChild(a);
   }
 }
 
-// Real web search via the in-artifact Anthropic API (no key needed inside Claude).
-async function webSearch(q){
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      model:"claude-sonnet-4-6",
-      max_tokens:1000,
-      messages:[{ role:"user", content:
-        `Search the web for: ${q}\n\nReturn ONLY a JSON array (no prose, no markdown fences) of up to 8 real results. Each item: {"title","url","snippet"} where snippet is one short sentence and url is a real working link.` }],
-      tools:[{ type:"web_search_20250305", name:"web_search" }]
-    })
-  });
-  if (!res.ok) throw new Error("http "+res.status);
-  const data = await res.json();
-  const text = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
-  const a = text.indexOf("["), b = text.lastIndexOf("]");
-  if (a<0 || b<0) throw new Error("no json in response");
-  const arr = JSON.parse(text.slice(a, b+1));
-  return Array.isArray(arr) ? arr.filter(r => r && r.url) : [];
+// Strip HTML tags / decode entities safely (no script execution).
+function stripHtml(s){
+  try { return new DOMParser().parseFromString(String(s),"text/html").body.textContent || ""; }
+  catch(e){ return String(s).replace(/<[^>]+>/g,""); }
+}
+
+// Run both sources in parallel, merge, de-dupe by URL.
+async function searchAll(q){
+  const [ddg, wiki] = await Promise.allSettled([ ddgSearch(q), wikiSearch(q) ]);
+  const out = [], seen = new Set();
+  const push = (r)=>{ if(!r||!r.url) return; const k=r.url.replace(/\/+$/,""); if(seen.has(k))return; seen.add(k); out.push(r); };
+  if (ddg.status==="fulfilled")  ddg.value.forEach(push);
+  if (wiki.status==="fulfilled") wiki.value.forEach(push);
+  return out.slice(0,8);
+}
+
+// DuckDuckGo Instant Answer API — keyless. Often returns the official site for branded queries.
+async function ddgSearch(q){
+  const r = await fetch("https://api.duckduckgo.com/?format=json&no_html=1&skip_disambig=1&t=burrow&q="+encodeURIComponent(q));
+  if (!r.ok) throw new Error("ddg "+r.status);
+  const d = await r.json();
+  const out = [];
+  if (d.AbstractURL && d.Heading)
+    out.push({ title:d.Heading, url:d.AbstractURL, snippet:d.AbstractText||"", src:"Web" });
+  (d.Results||[]).slice(0,3).forEach(x=>{ if(x.FirstURL) out.push({ title:stripHtml(x.Text)||x.FirstURL, url:x.FirstURL, snippet:"", src:"Web" }); });
+  (d.RelatedTopics||[]).forEach(x=>{ if(x.FirstURL) out.push({ title:stripHtml(x.Text)||x.FirstURL, url:x.FirstURL, snippet:"", src:"Web" }); });
+  return out;
+}
+
+// Wikipedia search API — keyless, reliable CORS via origin=*.
+async function wikiSearch(q){
+  const r = await fetch("https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&origin=*&srlimit=6&srsearch="+encodeURIComponent(q));
+  if (!r.ok) throw new Error("wiki "+r.status);
+  const d = await r.json();
+  return (d.query?.search||[]).map(s=>({
+    title: s.title,
+    url: "https://en.wikipedia.org/wiki/"+encodeURIComponent(s.title.replace(/ /g,"_")),
+    snippet: stripHtml(s.snippet||"") + "…",
+    src: "Wikipedia"
+  }));
 }
 
 /* ---------- WEB: a real external site ---------- */
