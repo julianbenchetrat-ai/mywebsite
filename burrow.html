@@ -1,0 +1,707 @@
+<!--
+  Burrow — a tiny browser that lives in a tab.
+  Open/close tabs · build & save your own sites · revisit them anytime · load real links.
+  Your created sites persist across sessions via the artifact storage API.
+-->
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+<style>
+  :root{
+    --chrome:#232a36;        /* inky toolbar */
+    --chrome-2:#2c3543;
+    --chrome-3:#374152;
+    --paper:#f7f6f3;         /* page canvas */
+    --card:#ffffff;
+    --ink:#1a1f29;
+    --muted:#6b7280;
+    --line:#e7e4dd;
+    --accent:#ef6f53;        /* the real web */
+    --accent-soft:#fde8e2;
+    --mine:#41a784;          /* your sites */
+    --mine-soft:#dff1ea;
+    --home:#e0a82e;          /* home */
+    --radius:10px;
+    color-scheme: light;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--chrome);
+    font-family:"Inter",system-ui,-apple-system,sans-serif;
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    overflow:hidden;
+  }
+  .browser{height:100vh; display:flex; flex-direction:column}
+
+  /* ---------- tab strip ---------- */
+  .tabstrip{
+    display:flex; align-items:flex-end; gap:2px;
+    padding:8px 8px 0 8px; background:var(--chrome);
+  }
+  .tab{
+    display:flex; align-items:center; gap:8px;
+    max-width:220px; min-width:120px; height:38px;
+    padding:0 10px; border-radius:9px 9px 0 0;
+    background:var(--chrome-2); color:#c3cad6;
+    cursor:pointer; user-select:none; position:relative;
+    transition:background .12s;
+  }
+  .tab:hover{background:var(--chrome-3)}
+  .tab.active{background:var(--paper); color:var(--ink)}
+  .tab .fav{
+    width:18px;height:18px;border-radius:5px;flex:0 0 auto;
+    display:grid;place-items:center;font-size:11px;font-weight:600;color:#fff;
+    font-family:"Fraunces",serif;
+  }
+  .tab .label{
+    flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    font-size:13px; font-weight:500;
+  }
+  .tab .x{
+    width:18px;height:18px;border-radius:5px;flex:0 0 auto;
+    display:grid;place-items:center;font-size:14px;line-height:1;color:inherit;opacity:.55;
+  }
+  .tab .x:hover{opacity:1;background:rgba(0,0,0,.12)}
+  .newtab{
+    width:34px;height:34px;margin:0 4px 2px;border:none;border-radius:8px;
+    background:transparent;color:#9aa4b2;font-size:20px;cursor:pointer;flex:0 0 auto;
+  }
+  .newtab:hover{background:var(--chrome-2);color:#fff}
+
+  /* ---------- toolbar ---------- */
+  .toolbar{
+    display:flex; align-items:center; gap:8px;
+    padding:8px 12px; background:var(--paper); border-bottom:1px solid var(--line);
+  }
+  .navbtn{
+    width:34px;height:34px;border:none;border-radius:8px;background:transparent;
+    color:#475066;cursor:pointer;font-size:16px;display:grid;place-items:center;flex:0 0 auto;
+  }
+  .navbtn:hover:not(:disabled){background:#ecebe5}
+  .navbtn:disabled{opacity:.3;cursor:default}
+  .address{
+    flex:1; display:flex; align-items:center; gap:0;
+    background:var(--card); border:1.5px solid var(--line); border-radius:999px;
+    height:38px; padding:0 6px 0 6px; overflow:hidden; transition:border-color .12s;
+  }
+  .address:focus-within{border-color:var(--accent)}
+  .scheme{
+    font-family:"JetBrains Mono",monospace; font-size:11px; font-weight:500;
+    padding:4px 9px; border-radius:999px; margin-right:6px; white-space:nowrap;
+    background:var(--accent-soft); color:var(--accent);
+  }
+  .scheme.mine{background:var(--mine-soft);color:var(--mine)}
+  .scheme.home{background:#f6ecd2;color:#a87d12}
+  #url{
+    flex:1; border:none; outline:none; background:transparent;
+    font-family:"JetBrains Mono",monospace; font-size:13px; color:var(--ink);
+    height:100%;
+  }
+  .btn{
+    border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;
+    padding:8px 14px;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;
+  }
+  .btn.primary{background:var(--accent);color:#fff}
+  .btn.primary:hover{background:#e25d40}
+  .btn.ghost{background:#ecebe5;color:#475066}
+  .btn.ghost:hover{background:#e2e0d8}
+  .btn.mine{background:var(--mine);color:#fff}
+  .btn.mine:hover{background:#37936f}
+
+  /* ---------- content ---------- */
+  .stage{flex:1; position:relative; background:var(--paper); overflow:hidden}
+  .frame{position:absolute; inset:0; width:100%; height:100%; border:none; background:#fff}
+  .scroll{position:absolute; inset:0; overflow:auto}
+
+  /* home / new tab page */
+  .home{max-width:920px;margin:0 auto;padding:54px 28px 60px}
+  .brand{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+  .brand .logo{
+    width:46px;height:46px;border-radius:13px;background:var(--accent);
+    display:grid;place-items:center;color:#fff;font-family:"Fraunces",serif;font-size:26px;font-weight:600;
+    box-shadow:0 6px 18px rgba(239,111,83,.32);
+  }
+  .brand h1{font-family:"Fraunces",serif;font-weight:600;font-size:34px;margin:0;letter-spacing:-.5px}
+  .brand p{margin:2px 0 0;color:var(--muted);font-size:14px}
+  .homebar{
+    display:flex;gap:10px;margin:28px 0 38px;
+  }
+  .homebar input{
+    flex:1;height:48px;border:1.5px solid var(--line);border-radius:12px;background:#fff;
+    padding:0 18px;font-family:"JetBrains Mono",monospace;font-size:14px;outline:none;color:var(--ink);
+  }
+  .homebar input:focus{border-color:var(--accent)}
+  .sectlabel{
+    display:flex;align-items:center;gap:10px;margin:0 0 16px;
+    font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);
+  }
+  .sectlabel::after{content:"";flex:1;height:1px;background:var(--line)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;
+    cursor:pointer;transition:transform .12s,box-shadow .12s,border-color .12s;position:relative;
+  }
+  .card:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(30,30,40,.08);border-color:#d8d4cb}
+  .card .fav{
+    width:38px;height:38px;border-radius:10px;display:grid;place-items:center;
+    color:#fff;font-family:"Fraunces",serif;font-size:18px;font-weight:600;margin-bottom:12px;
+  }
+  .card h3{margin:0 0 3px;font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .card .sub{font-size:11.5px;color:var(--muted);font-family:"JetBrains Mono",monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .card .acts{display:flex;gap:6px;margin-top:12px;opacity:0;transition:opacity .12s}
+  .card:hover .acts{opacity:1}
+  .card .acts button{
+    border:none;background:#f1efe9;color:#5a6172;border-radius:7px;padding:5px 9px;font-size:11px;
+    font-weight:600;cursor:pointer;font-family:inherit;
+  }
+  .card .acts button:hover{background:#e6e3db}
+  .card .acts button.del:hover{background:#fbe3dd;color:#c0432a}
+  .card.new{
+    border-style:dashed;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;color:var(--mine);min-height:128px;
+  }
+  .card.new .plus{font-size:30px;line-height:1;margin-bottom:6px}
+  .card.new span{font-size:13px;font-weight:600}
+  .empty{color:var(--muted);font-size:13.5px;padding:6px 2px}
+  .quick{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{
+    border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 15px;font-size:13px;
+    cursor:pointer;color:var(--ink);transition:border-color .12s,background .12s;font-weight:500;
+  }
+  .chip:hover{border-color:var(--accent);background:var(--accent-soft)}
+  .hint{margin-top:30px;font-size:12px;color:var(--muted);line-height:1.6;max-width:640px}
+  .hint code{font-family:"JetBrains Mono",monospace;background:#ecebe5;padding:1px 6px;border-radius:5px;font-size:11px}
+
+  /* editor */
+  .editor{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--paper)}
+  .editor .ehead{
+    display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line);background:#fff;
+  }
+  .editor .ehead .mlogo{
+    width:34px;height:34px;border-radius:9px;background:var(--mine);display:grid;place-items:center;color:#fff;
+    font-family:"Fraunces",serif;font-size:17px;flex:0 0 auto;
+  }
+  .editor input.name{
+    flex:1;max-width:340px;height:38px;border:1.5px solid var(--line);border-radius:9px;padding:0 14px;
+    font-family:"Inter";font-size:15px;font-weight:600;outline:none;
+  }
+  .editor input.name:focus{border-color:var(--mine)}
+  .editor .spacer{flex:1}
+  .editor .ebody{flex:1;display:flex;min-height:0}
+  .editor .codepane{display:flex;flex-direction:column;width:48%;min-width:280px;border-right:1px solid var(--line)}
+  .editor .codetab{
+    padding:8px 16px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+    border-bottom:1px solid var(--line);background:#fbfaf7;
+  }
+  .editor textarea{
+    flex:1;border:none;outline:none;resize:none;padding:16px 18px;background:#fbfaf7;
+    font-family:"JetBrains Mono",monospace;font-size:13px;line-height:1.65;color:#2b3242;tab-size:2;
+  }
+  .editor .preview{flex:1;display:flex;flex-direction:column;min-width:0}
+  .editor .prevtab{
+    padding:8px 16px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+    border-bottom:1px solid var(--line);background:#fff;display:flex;align-items:center;gap:8px;
+  }
+  .editor .prevtab .dot{width:7px;height:7px;border-radius:50%;background:var(--mine)}
+  .editor iframe.prev{flex:1;border:none;background:#fff}
+
+  /* real-site fallback / loader */
+  .overlay{
+    position:absolute;left:0;right:0;top:0;display:flex;align-items:center;gap:12px;
+    padding:10px 16px;background:#fff;border-bottom:1px solid var(--line);font-size:13px;color:var(--muted);
+    z-index:3;
+  }
+  .overlay .spin{
+    width:15px;height:15px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;
+    animation:spin .7s linear infinite;flex:0 0 auto;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .overlay .grow{flex:1}
+  .blocked{
+    position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:40px;gap:16px;background:var(--paper);z-index:2;
+  }
+  .blocked .ic{font-size:42px}
+  .blocked h2{font-family:"Fraunces",serif;font-weight:600;margin:0;font-size:24px}
+  .blocked p{margin:0;color:var(--muted);max-width:420px;line-height:1.6;font-size:14px}
+  .blocked code{font-family:"JetBrains Mono",monospace;background:#ecebe5;padding:2px 7px;border-radius:6px}
+
+  /* not found */
+  .notfound{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:14px;text-align:center;padding:40px}
+  .notfound .ic{font-size:46px}
+  .notfound h2{font-family:"Fraunces",serif;margin:0;font-size:24px}
+  .notfound p{margin:0;color:var(--muted)}
+
+  @media(max-width:640px){
+    .editor .ebody{flex-direction:column}
+    .editor .codepane{width:auto;border-right:none;border-bottom:1px solid var(--line);height:45%}
+    .home{padding:34px 18px}
+    .btn span.lbl{display:none}
+  }
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="browser">
+  <div class="tabstrip" id="tabstrip"></div>
+
+  <div class="toolbar">
+    <button class="navbtn" id="back"  title="Back">‹</button>
+    <button class="navbtn" id="fwd"   title="Forward">›</button>
+    <button class="navbtn" id="reload" title="Reload">⟳</button>
+    <button class="navbtn" id="homebtn" title="Home">⌂</button>
+    <div class="address">
+      <span class="scheme home" id="scheme">home</span>
+      <input id="url" spellcheck="false" placeholder="Search, type a site name, or paste a link…" />
+    </div>
+    <button class="btn ghost" id="extbtn" style="display:none" title="Open in a real browser tab">↗ <span class="lbl">Open for real</span></button>
+    <button class="btn mine"  id="editbtn" style="display:none">✎ <span class="lbl">Edit</span></button>
+    <button class="btn primary" id="newsite">＋ <span class="lbl">New site</span></button>
+  </div>
+
+  <div class="stage" id="stage"></div>
+</div>
+
+<script>
+/* ======================================================================
+   Storage — created sites persist across sessions via window.storage.
+   One key ("burrow_sites") holds a { slug: site } map. In-memory fallback
+   if the storage API isn't available so the app still works either way.
+   ====================================================================== */
+const Store = (() => {
+  const KEY = "burrow_sites";
+  let cache = null;          // { slug: {slug,name,html,created,updated} }
+  const hasAPI = typeof window !== "undefined" && window.storage && window.storage.get;
+
+  async function ensure(){
+    if (cache) return cache;
+    if (hasAPI){
+      try { const r = await window.storage.get(KEY); cache = r ? JSON.parse(r.value) : {}; }
+      catch(e){ cache = {}; }   // key may not exist yet -> throws -> empty
+    } else { cache = {}; }
+    return cache;
+  }
+  async function persist(){
+    if (!hasAPI) return;
+    try { await window.storage.set(KEY, JSON.stringify(cache)); } catch(e){ /* keep in memory */ }
+  }
+  return {
+    async all(){ const c = await ensure(); return Object.values(c).sort((a,b)=>b.updated-a.updated); },
+    async get(slug){ const c = await ensure(); return c[slug] || null; },
+    async save(site){ const c = await ensure(); c[site.slug] = site; await persist(); return site; },
+    async remove(slug){ const c = await ensure(); delete c[slug]; await persist(); },
+    persistent: hasAPI
+  };
+})();
+
+/* ======================================================================
+   Helpers
+   ====================================================================== */
+const $ = (s, r=document) => r.querySelector(s);
+const stage = $("#stage");
+const FAV_COLORS = ["#ef6f53","#41a784","#e0a82e","#6c8ae4","#b167c4","#d9637f","#3fae9a","#e08a3c"];
+const colorFor = (str) => { let h=0; for(const ch of String(str)) h=(h*31+ch.charCodeAt(0))>>>0; return FAV_COLORS[h%FAV_COLORS.length]; };
+const slugify = (s) => s.toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"") || "site";
+
+function looksLikeUrl(s){
+  if (/\s/.test(s)) return false;
+  return /^[\w-]+(\.[\w-]+)+(:\d+)?(\/.*)?$/.test(s);   // has a dot, no spaces
+}
+function parseInput(raw){
+  const s = raw.trim();
+  if (!s) return "home://";
+  if (/^(home|create|mine|https?):\/\//.test(s)) return s;
+  if (looksLikeUrl(s)) return "https://" + s;
+  // bare words -> web search via an embed-friendly endpoint
+  return "https://lite.duckduckgo.com/lite/?q=" + encodeURIComponent(s);
+}
+function schemeOf(url){
+  if (url.startsWith("home://"))   return "home";
+  if (url.startsWith("create://")) return "create";
+  if (url.startsWith("mine://"))   return "mine";
+  return "web";
+}
+
+/* ======================================================================
+   Tab model.  Each tab keeps its own history stack + index.
+   ====================================================================== */
+let tabs = [];
+let activeId = null;
+let nextId = 1;
+
+const activeTab = () => tabs.find(t => t.id === activeId);
+const curUrl = (t) => t.history[t.idx];
+
+function newTab(url="home://", { activate=true } = {}){
+  const t = { id: nextId++, history:[url], idx:0, title:"New Tab" };
+  tabs.push(t);
+  if (activate) activeId = t.id;
+  renderTabs();
+  if (activate) renderStage();
+  return t;
+}
+function closeTab(id){
+  const i = tabs.findIndex(t=>t.id===id);
+  if (i<0) return;
+  tabs.splice(i,1);
+  if (tabs.length===0){ newTab("home://"); return; }
+  if (activeId===id){ activeId = tabs[Math.min(i, tabs.length-1)].id; renderStage(); }
+  renderTabs();
+}
+function switchTab(id){ activeId=id; renderTabs(); renderStage(); }
+
+function navigate(url, { replace=false } = {}){
+  const t = activeTab(); if(!t) return;
+  if (replace){ t.history[t.idx] = url; }
+  else {
+    t.history = t.history.slice(0, t.idx+1);
+    if (t.history[t.idx] !== url){ t.history.push(url); t.idx++; }
+  }
+  renderStage();
+}
+function goBack(){ const t=activeTab(); if(t&&t.idx>0){ t.idx--; renderStage(); } }
+function goFwd(){ const t=activeTab(); if(t&&t.idx<t.history.length-1){ t.idx++; renderStage(); } }
+function reload(){ renderStage(); }
+
+/* ======================================================================
+   Render: tab strip
+   ====================================================================== */
+function renderTabs(){
+  const strip = $("#tabstrip");
+  strip.innerHTML = "";
+  for (const t of tabs){
+    const el = document.createElement("div");
+    el.className = "tab" + (t.id===activeId ? " active":"");
+    el.onclick = (e)=>{ if(!e.target.closest(".x")) switchTab(t.id); };
+    const letter = (t.title||"N").trim()[0]?.toUpperCase() || "N";
+    el.innerHTML =
+      `<div class="fav" style="background:${colorFor(t.title)}">${letter}</div>
+       <div class="label">${escapeHtml(t.title)}</div>
+       <div class="x" title="Close tab">×</div>`;
+    el.querySelector(".x").onclick = (e)=>{ e.stopPropagation(); closeTab(t.id); };
+    strip.appendChild(el);
+  }
+  const add = document.createElement("button");
+  add.className="newtab"; add.textContent="+"; add.title="New tab";
+  add.onclick = ()=> newTab("home://");
+  strip.appendChild(add);
+}
+
+/* ======================================================================
+   Render: address bar + nav state
+   ====================================================================== */
+function renderChrome(url){
+  const t = activeTab();
+  $("#back").disabled = !(t && t.idx>0);
+  $("#fwd").disabled  = !(t && t.idx < t.history.length-1);
+
+  const kind = schemeOf(url);
+  const schemeEl = $("#scheme");
+  const urlInput = $("#url");
+  const extBtn = $("#extbtn");
+  const editBtn = $("#editbtn");
+  extBtn.style.display = "none";
+  editBtn.style.display = "none";
+
+  if (kind==="home"){
+    schemeEl.textContent="home"; schemeEl.className="scheme home";
+    urlInput.value=""; urlInput.placeholder="Search, type a site name, or paste a link…";
+  } else if (kind==="create"){
+    schemeEl.textContent="build"; schemeEl.className="scheme mine";
+    urlInput.value = url;
+  } else if (kind==="mine"){
+    schemeEl.textContent="mine"; schemeEl.className="scheme mine";
+    urlInput.value = url;
+    editBtn.style.display="inline-flex";
+  } else {
+    schemeEl.textContent = url.startsWith("https")?"https":"http";
+    schemeEl.className="scheme";
+    urlInput.value = url;
+    extBtn.style.display="inline-flex";
+  }
+}
+
+/* ======================================================================
+   Render: the stage (page content) for the active tab's current url
+   ====================================================================== */
+async function renderStage(){
+  const t = activeTab(); if(!t) return;
+  const url = curUrl(t);
+  renderChrome(url);
+  const kind = schemeOf(url);
+
+  if      (kind==="home")   await renderHome();
+  else if (kind==="create") await renderEditor(url);
+  else if (kind==="mine")   await renderMine(url);
+  else                      renderWeb(url);
+
+  renderTabs(); // titles may have changed
+}
+
+function setTitle(title){
+  const t = activeTab(); if(t){ t.title = title; }
+}
+
+/* ---------- HOME / new-tab page ---------- */
+async function renderHome(){
+  setTitle("New Tab");
+  const sites = await Store.all();
+  const quick = [
+    ["Wikipedia","https://www.wikipedia.org"],
+    ["MDN Web Docs","https://developer.mozilla.org"],
+    ["example.com","https://example.com"],
+    ["Hacker News","https://news.ycombinator.com"],
+  ];
+  stage.innerHTML = `
+    <div class="scroll"><div class="home">
+      <div class="brand">
+        <div class="logo">B</div>
+        <div>
+          <h1>Burrow</h1>
+          <p>Your own little web — build sites, save them, and revisit anytime.</p>
+        </div>
+      </div>
+
+      <div class="homebar">
+        <input id="homeq" spellcheck="false" placeholder="Search the web, type a site name, or paste a link…" />
+        <button class="btn primary" id="homego">Go</button>
+      </div>
+
+      <div class="sectlabel">Your sites${Store.persistent?"":" · session only"}</div>
+      <div class="grid" id="sitegrid"></div>
+
+      <div class="sectlabel" style="margin-top:38px">Jump to the real web</div>
+      <div class="quick" id="quickrow"></div>
+
+      <p class="hint">
+        Build a page with <strong>New site</strong> — it saves to <code>mine://your-name</code> and
+        sticks around between sessions. Real links open inside Burrow when the site allows embedding;
+        if it doesn't, hit <strong>Open for real</strong> to pop it into a normal tab.
+      </p>
+    </div></div>`;
+
+  // sites grid
+  const grid = $("#sitegrid");
+  const newCard = document.createElement("div");
+  newCard.className="card new";
+  newCard.innerHTML = `<div class="plus">＋</div><span>Create a new site</span>`;
+  newCard.onclick = ()=> navigate("create://");
+  grid.appendChild(newCard);
+
+  for (const s of sites){
+    const card = document.createElement("div");
+    card.className="card";
+    card.onclick = (e)=>{ if(!e.target.closest(".acts")) navigate("mine://"+s.slug); };
+    const letter = (s.name||"S").trim()[0]?.toUpperCase()||"S";
+    card.innerHTML = `
+      <div class="fav" style="background:${colorFor(s.name)}">${letter}</div>
+      <h3>${escapeHtml(s.name)}</h3>
+      <div class="sub">mine://${s.slug}</div>
+      <div class="acts">
+        <button data-act="edit">Edit</button>
+        <button data-act="del" class="del">Delete</button>
+      </div>`;
+    card.querySelector('[data-act="edit"]').onclick = (e)=>{ e.stopPropagation(); navigate("create://"+s.slug); };
+    card.querySelector('[data-act="del"]').onclick = async (e)=>{
+      e.stopPropagation();
+      if (confirm(`Delete “${s.name}”? This can't be undone.`)){ await Store.remove(s.slug); renderHome(); }
+    };
+    grid.appendChild(card);
+  }
+
+  // quick links
+  const qr = $("#quickrow");
+  for (const [name,href] of quick){
+    const c = document.createElement("button");
+    c.className="chip"; c.textContent=name;
+    c.onclick = ()=> navigate(href);
+    qr.appendChild(c);
+  }
+
+  // home search
+  const submit = ()=>{ const v=$("#homeq").value; if(v.trim()) navigate(parseInput(v)); };
+  $("#homego").onclick = submit;
+  $("#homeq").addEventListener("keydown", e=>{ if(e.key==="Enter") submit(); });
+}
+
+/* ---------- MINE: render a saved site ---------- */
+async function renderMine(url){
+  const slug = url.slice("mine://".length);
+  const site = await Store.get(slug);
+  if (!site){
+    setTitle("Not found");
+    stage.innerHTML = `
+      <div class="notfound">
+        <div class="ic">🕳️</div>
+        <h2>No site at mine://${escapeHtml(slug)}</h2>
+        <p>Nothing's saved here yet.</p>
+        <button class="btn mine" id="mk">＋ Build it</button>
+      </div>`;
+    $("#mk").onclick = ()=> navigate("create://"+slug, {replace:true});
+    return;
+  }
+  setTitle(site.name);
+  stage.innerHTML = "";
+  const f = document.createElement("iframe");
+  f.className="frame";
+  f.setAttribute("sandbox","allow-scripts allow-forms allow-popups allow-modals");
+  f.srcdoc = site.html;
+  stage.appendChild(f);
+}
+
+/* ---------- CREATE: the site builder ---------- */
+const STARTER = `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body{
+    font-family: system-ui, sans-serif;
+    background: #fff7ed;
+    color: #3a2a1d;
+    display: grid; place-items: center; min-height: 100vh; margin: 0;
+    text-align: center;
+  }
+  h1{ font-size: 44px; margin: 0 0 8px; }
+  p{ color: #8a6d57; }
+  button{
+    margin-top: 18px; padding: 12px 22px; border: none; border-radius: 10px;
+    background: #41a784; color: #fff; font-size: 15px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+  <div>
+    <h1>👋 My first site</h1>
+    <p>Edit the code on the left — this preview updates live.</p>
+    <button onclick="alert('It works! Now make it yours.')">Click me</button>
+  </div>
+</body>
+</html>`;
+
+async function renderEditor(url){
+  const slug = url.startsWith("create://") ? url.slice("create://".length) : "";
+  const existing = slug ? await Store.get(slug) : null;
+  setTitle(existing ? "Editing "+existing.name : "New site");
+
+  stage.innerHTML = `
+    <div class="editor">
+      <div class="ehead">
+        <div class="mlogo">B</div>
+        <input class="name" id="sname" placeholder="Name your site…" value="${existing?escapeHtml(existing.name):""}" />
+        <div class="spacer"></div>
+        <button class="btn ghost" id="ecancel">Cancel</button>
+        <button class="btn mine" id="esave">Save site</button>
+      </div>
+      <div class="ebody">
+        <div class="codepane">
+          <div class="codetab">HTML · CSS · JS — your page</div>
+          <textarea id="scode" spellcheck="false"></textarea>
+        </div>
+        <div class="preview">
+          <div class="prevtab"><span class="dot"></span> Live preview</div>
+          <iframe class="prev" id="sprev" sandbox="allow-scripts allow-forms allow-popups allow-modals"></iframe>
+        </div>
+      </div>
+    </div>`;
+
+  const code = $("#scode");
+  const prev = $("#sprev");
+  const nameI = $("#sname");
+  code.value = existing ? existing.html : STARTER;
+
+  let timer=null;
+  const sync = ()=>{ prev.srcdoc = code.value; };
+  sync();
+  code.addEventListener("input", ()=>{ clearTimeout(timer); timer=setTimeout(sync, 250); });
+  // allow real tabs in the textarea
+  code.addEventListener("keydown", (e)=>{
+    if (e.key==="Tab"){ e.preventDefault();
+      const s=code.selectionStart, en=code.selectionEnd;
+      code.value = code.value.slice(0,s)+"  "+code.value.slice(en);
+      code.selectionStart=code.selectionEnd=s+2;
+    }
+  });
+
+  $("#ecancel").onclick = ()=> existing ? navigate("mine://"+existing.slug,{replace:true}) : navigate("home://",{replace:true});
+  $("#esave").onclick = async ()=>{
+    const name = nameI.value.trim();
+    if (!name){ nameI.focus(); nameI.style.borderColor="var(--accent)"; return; }
+    const finalSlug = existing ? existing.slug : await uniqueSlug(slugify(name));
+    const now = Date.now();
+    await Store.save({
+      slug: finalSlug, name, html: code.value,
+      created: existing ? existing.created : now, updated: now
+    });
+    navigate("mine://"+finalSlug, {replace:true});
+  };
+}
+async function uniqueSlug(base){
+  let s=base, n=2;
+  while (await Store.get(s)){ s = base+"-"+n; n++; }
+  return s;
+}
+
+/* ---------- WEB: a real external site ---------- */
+function renderWeb(url){
+  let host=url; try{ host=new URL(url).hostname.replace(/^www\./,""); }catch(e){}
+  setTitle(host);
+  stage.innerHTML = `
+    <div class="overlay" id="ov">
+      <div class="spin"></div>
+      <div class="grow">Loading <strong>${escapeHtml(host)}</strong>…</div>
+      <button class="btn ghost" id="ovext">Open for real ↗</button>
+    </div>
+    <div class="blocked" id="blocked" style="display:none">
+      <div class="ic">🔒</div>
+      <h2>${escapeHtml(host)} won't embed here</h2>
+      <p>Lots of big sites block being shown inside another page for security. That's a browser rule Burrow can't override — but it opens fine in a normal tab.</p>
+      <button class="btn primary" id="bext">Open ${escapeHtml(host)} for real ↗</button>
+    </div>`;
+  const f = document.createElement("iframe");
+  f.className="frame"; f.src=url;
+  stage.appendChild(f);
+
+  const ov = $("#ov");
+  let loaded=false;
+  f.addEventListener("load", ()=>{ loaded=true; if(ov) ov.style.display="none"; });
+  // If it never fires "load" in a few seconds, it's almost certainly blocked.
+  setTimeout(()=>{
+    if(!loaded){ if(ov) ov.style.display="none"; const b=$("#blocked"); if(b) b.style.display="flex"; }
+  }, 3500);
+
+  const open = ()=> window.open(url, "_blank", "noopener");
+  $("#ovext").onclick = open;
+  const bext=$("#bext"); if(bext) bext.onclick=open;
+}
+
+/* ======================================================================
+   Wiring
+   ====================================================================== */
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+$("#back").onclick   = goBack;
+$("#fwd").onclick    = goFwd;
+$("#reload").onclick = reload;
+$("#homebtn").onclick= ()=> navigate("home://");
+$("#newsite").onclick= ()=> navigate("create://");
+$("#extbtn").onclick = ()=>{ const u=curUrl(activeTab()); if(u) window.open(u,"_blank","noopener"); };
+$("#editbtn").onclick= ()=>{ const u=curUrl(activeTab()); if(u.startsWith("mine://")) navigate("create://"+u.slice("mine://".length)); };
+
+$("#url").addEventListener("keydown", e=>{
+  if (e.key==="Enter"){ navigate(parseInput(e.target.value)); $("#url").blur(); }
+});
+
+document.addEventListener("keydown", e=>{
+  const mod = e.metaKey || e.ctrlKey;
+  if (mod && e.key==="t"){ e.preventDefault(); newTab("home://"); }
+  else if (mod && e.key==="l"){ e.preventDefault(); $("#url").focus(); $("#url").select(); }
+});
+
+/* boot */
+newTab("home://");
+</script>
