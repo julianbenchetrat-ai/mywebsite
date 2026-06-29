@@ -237,6 +237,27 @@
   .notfound h2{font-family:"Fraunces",serif;margin:0;font-size:24px}
   .notfound p{margin:0;color:var(--muted)}
 
+  /* search results */
+  .results{max-width:760px;margin:0 auto;padding:36px 28px 60px}
+  .results .q{font-family:"Fraunces",serif;font-size:26px;font-weight:600;margin:0 0 3px;letter-spacing:-.3px}
+  .results .qsub{color:var(--muted);font-size:13px;margin:0 0 24px}
+  .minihit{display:flex;align-items:center;gap:11px;padding:11px 13px;background:var(--mine-soft);border-radius:11px;margin-bottom:8px;cursor:pointer;transition:background .12s}
+  .minihit:hover{background:#cdebe0}
+  .minihit .f{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;color:#fff;font-family:"Fraunces",serif;font-size:14px;flex:0 0 auto}
+  .minihit b{font-size:14px}
+  .minihit .s{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--mine);margin-left:auto}
+  .result{padding:15px 0;border-bottom:1px solid var(--line);cursor:pointer}
+  .result:first-child{padding-top:6px}
+  .result .rhost{font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--mine);margin:0 0 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .result h3{margin:0 0 4px;font-size:16px;font-weight:600;color:#1a4fae}
+  .result:hover h3{text-decoration:underline}
+  .result p{margin:0;color:#4b5563;font-size:13.5px;line-height:1.55}
+  .searchload{display:flex;align-items:center;gap:11px;color:var(--muted);font-size:14px;padding:18px 0}
+  .searchload .spin{width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;flex:0 0 auto}
+  .enginerow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:24px;padding-top:18px;border-top:1px solid var(--line)}
+  .enginerow .lab{font-size:12.5px;color:var(--muted);margin-right:2px}
+  .errbox{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px;color:var(--muted);font-size:13.5px;line-height:1.6}
+
   @media(max-width:640px){
     .editor .ebody{flex-direction:column}
     .editor .codepane{width:auto;border-right:none;border-bottom:1px solid var(--line);height:45%}
@@ -314,15 +335,16 @@ function looksLikeUrl(s){
 function parseInput(raw){
   const s = raw.trim();
   if (!s) return "home://";
-  if (/^(home|create|mine|https?):\/\//.test(s)) return s;
+  if (/^(home|create|mine|search|https?):\/\//.test(s)) return s;
   if (looksLikeUrl(s)) return "https://" + s;
-  // bare words -> web search via an embed-friendly endpoint
-  return "https://lite.duckduckgo.com/lite/?q=" + encodeURIComponent(s);
+  // bare words -> Burrow's own search results page
+  return "search://" + encodeURIComponent(s);
 }
 function schemeOf(url){
   if (url.startsWith("home://"))   return "home";
   if (url.startsWith("create://")) return "create";
   if (url.startsWith("mine://"))   return "mine";
+  if (url.startsWith("search://")) return "search";
   return "web";
 }
 
@@ -417,6 +439,10 @@ function renderChrome(url){
     schemeEl.textContent="mine"; schemeEl.className="scheme mine";
     urlInput.value = url;
     editBtn.style.display="inline-flex";
+  } else if (kind==="search"){
+    schemeEl.textContent="search"; schemeEl.className="scheme";
+    urlInput.value = decodeURIComponent(url.slice("search://".length));
+    extBtn.style.display="inline-flex";
   } else {
     schemeEl.textContent = url.startsWith("https")?"https":"http";
     schemeEl.className="scheme";
@@ -437,6 +463,7 @@ async function renderStage(){
   if      (kind==="home")   await renderHome();
   else if (kind==="create") await renderEditor(url);
   else if (kind==="mine")   await renderMine(url);
+  else if (kind==="search") await renderSearch(url);
   else                      renderWeb(url);
 
   renderTabs(); // titles may have changed
@@ -478,9 +505,10 @@ async function renderHome(){
       <div class="quick" id="quickrow"></div>
 
       <p class="hint">
-        Build a page with <strong>New site</strong> — it saves to <code>mine://your-name</code> and
-        sticks around between sessions. Real links open inside Burrow when the site allows embedding;
-        if it doesn't, hit <strong>Open for real</strong> to pop it into a normal tab.
+        Type anything that isn't a link and Burrow runs the search itself, right here — no redirect.
+        Build a page with <strong>New site</strong> and it saves to <code>mine://your-name</code>,
+        sticking around between sessions. Real links open in-frame when the site allows it; if it doesn't,
+        hit <strong>Open for real</strong> to pop it into a normal tab.
       </p>
     </div></div>`;
 
@@ -646,6 +674,94 @@ async function uniqueSlug(base){
   return s;
 }
 
+/* ---------- SEARCH: Burrow's own results page ---------- */
+const ENGINES = [
+  ["Google","https://www.google.com/search?q="],
+  ["DuckDuckGo","https://duckduckgo.com/?q="],
+  ["Bing","https://www.bing.com/search?q="],
+  ["Wikipedia","https://en.wikipedia.org/w/index.php?search="],
+];
+
+async function renderSearch(url){
+  const q = decodeURIComponent(url.slice("search://".length));
+  setTitle(q);
+  const ql = q.toLowerCase();
+  const sites = await Store.all();
+  const matches = sites.filter(s => s.name.toLowerCase().includes(ql) || s.slug.includes(ql));
+
+  stage.innerHTML = `
+    <div class="scroll"><div class="results">
+      <p class="q">${escapeHtml(q)}</p>
+      <p class="qsub">Searched across the web and your own sites</p>
+      <div id="minehits"></div>
+      <div id="weblist"><div class="searchload"><div class="spin"></div> Searching the web…</div></div>
+      <div class="enginerow"><span class="lab">Open this search in a real tab:</span></div>
+    </div></div>`;
+
+  // matches from the user's own sites
+  const mh = $("#minehits");
+  for (const s of matches){
+    const d = document.createElement("div"); d.className="minihit";
+    d.onclick = ()=> navigate("mine://"+s.slug);
+    const letter = (s.name||"S").trim()[0]?.toUpperCase()||"S";
+    d.innerHTML = `<div class="f" style="background:${colorFor(s.name)}">${letter}</div>
+                   <b>${escapeHtml(s.name)}</b><span class="s">mine://${s.slug}</span>`;
+    mh.appendChild(d);
+  }
+
+  // permanent escape-hatch engine buttons
+  const er = $(".enginerow");
+  for (const [n, base] of ENGINES){
+    const b = document.createElement("button"); b.className="chip"; b.textContent = n+" ↗";
+    b.onclick = ()=> window.open(base+encodeURIComponent(q), "_blank", "noopener");
+    er.appendChild(b);
+  }
+
+  // live web results — guard against the tab navigating away mid-request
+  try {
+    const results = await webSearch(q);
+    if (curUrl(activeTab()) !== url) return;
+    const list = $("#weblist");
+    if (!results.length){ list.innerHTML = `<div class="errbox">No live results came back — try one of the engines below.</div>`; return; }
+    list.innerHTML = "";
+    for (const r of results){
+      let host = r.url; try{ host = new URL(r.url).hostname.replace(/^www\./,""); }catch(e){}
+      const a = document.createElement("div"); a.className="result";
+      a.onclick = ()=> navigate(r.url);
+      a.innerHTML = `<p class="rhost">${escapeHtml(host)}</p>
+                     <h3>${escapeHtml(r.title||r.url)}</h3>
+                     <p>${escapeHtml(r.snippet||"")}</p>`;
+      list.appendChild(a);
+    }
+  } catch(e){
+    if (curUrl(activeTab()) !== url) return;
+    const list = $("#weblist");
+    if (list) list.innerHTML = `<div class="errbox">Live results aren't reachable here — that needs Burrow running inside Claude (a downloaded copy can't call the search service). The engine buttons below always work.</div>`;
+  }
+}
+
+// Real web search via the in-artifact Anthropic API (no key needed inside Claude).
+async function webSearch(q){
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      model:"claude-sonnet-4-6",
+      max_tokens:1000,
+      messages:[{ role:"user", content:
+        `Search the web for: ${q}\n\nReturn ONLY a JSON array (no prose, no markdown fences) of up to 8 real results. Each item: {"title","url","snippet"} where snippet is one short sentence and url is a real working link.` }],
+      tools:[{ type:"web_search_20250305", name:"web_search" }]
+    })
+  });
+  if (!res.ok) throw new Error("http "+res.status);
+  const data = await res.json();
+  const text = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
+  const a = text.indexOf("["), b = text.lastIndexOf("]");
+  if (a<0 || b<0) throw new Error("no json in response");
+  const arr = JSON.parse(text.slice(a, b+1));
+  return Array.isArray(arr) ? arr.filter(r => r && r.url) : [];
+}
+
 /* ---------- WEB: a real external site ---------- */
 function renderWeb(url){
   let host=url; try{ host=new URL(url).hostname.replace(/^www\./,""); }catch(e){}
@@ -689,7 +805,13 @@ $("#fwd").onclick    = goFwd;
 $("#reload").onclick = reload;
 $("#homebtn").onclick= ()=> navigate("home://");
 $("#newsite").onclick= ()=> navigate("create://");
-$("#extbtn").onclick = ()=>{ const u=curUrl(activeTab()); if(u) window.open(u,"_blank","noopener"); };
+$("#extbtn").onclick = ()=>{
+  const u = curUrl(activeTab()); if(!u) return;
+  if (u.startsWith("search://")){
+    const q = decodeURIComponent(u.slice("search://".length));
+    window.open("https://www.google.com/search?q="+encodeURIComponent(q), "_blank", "noopener");
+  } else window.open(u, "_blank", "noopener");
+};
 $("#editbtn").onclick= ()=>{ const u=curUrl(activeTab()); if(u.startsWith("mine://")) navigate("create://"+u.slice("mine://".length)); };
 
 $("#url").addEventListener("keydown", e=>{
